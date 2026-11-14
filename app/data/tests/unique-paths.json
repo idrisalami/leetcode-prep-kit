@@ -1,0 +1,25 @@
+{
+  "slug": "unique-paths",
+  "driver": "function",
+  "class": "Solution",
+  "method": "uniquePaths",
+  "params": [{"name": "m", "type": "int"}, {"name": "n", "type": "int"}],
+  "returns": "int",
+  "compare": "exact",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "args": [3, 7], "expected": 28},
+    {"name": "Example 2", "example": true, "args": [3, 2], "expected": 3},
+    {"name": "Single cell", "args": [1, 1], "expected": 1},
+    {"name": "Single row", "args": [1, 100], "expected": 1},
+    {"name": "Single column", "args": [100, 1], "expected": 1},
+    {"name": "Two by two", "args": [2, 2], "expected": 2},
+    {"name": "Three by three", "args": [3, 3], "expected": 6},
+    {"name": "Wide", "args": [7, 3], "expected": 28},
+    {"name": "Ten by ten", "args": [10, 10], "expected": 48620},
+    {"name": "Mid size", "args": [23, 12], "expected": 193536720},
+    {"name": "Tall and wide", "args": [51, 9], "expected": 1916797311},
+    {"name": "Two rows", "args": [2, 100], "expected": 100},
+    {"name": "Largest answer", "args": [17, 17], "expected": 601080390}
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "slug": "word-search",
+  "driver": "function",
+  "class": "Solution",
+  "method": "exist",
+  "params": [{"name": "board", "type": "char[][]"}, {"name": "word", "type": "str"}],
+  "returns": "bool",
+  "compare": "exact",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "args": [[["A", "B", "C", "E"], ["S", "F", "C", "S"], ["A", "D", "E", "E"]], "ABCCED"], "expected": true},
+    {"name": "Example 2", "example": true, "args": [[["A", "B", "C", "E"], ["S", "F", "C", "S"], ["A", "D", "E", "E"]], "SEE"], "expected": true},
+    {"name": "Example 3", "example": true, "args": [[["A", "B", "C", "E"], ["S", "F", "C", "S"], ["A", "D", "E", "E"]], "ABCB"], "expected": false},
+    {"name": "Single cell match", "args": [[["A"]], "A"], "expected": true},
+    {"name": "Single cell miss", "args": [[["A"]], "B"], "expected": false},
+    {"name": "Cell used twice", "args": [[["A"]], "AA"], "expected": false},
+    {"name": "Ends of a row", "args": [[["A", "B", "C"]], "AC"], "expected": false},
+    {"name": "Ends of a column", "args": [[["A"], ["B"], ["C"]], "AC"], "expected": false},
+    {"name": "Case matters", "args": [[["a", "A"]], "AA"], "expected": false},
+    {"name": "Case matches", "args": [[["a", "A"]], "aA"], "expected": true},
+    {"name": "Cycle back", "args": [[["A", "B"], ["D", "C"]], "ABCDA"], "expected": false},
+    {"name": "Full board path", "args": [[["A", "B", "C", "E"], ["S", "F", "C", "S"], ["A", "D", "E", "E"]], "ABCESEEEFS"], "expected": false},
+    {"name": "Needs backtracking", "args": [[["C", "A", "A"], ["A", "A", "A"], ["B", "C", "D"]], "AAB"], "expected": true},
+    {"name": "Word too long", "args": [[["A", "B"]], "ABA"], "expected": false},
+    {"name": "Dead end then match", "args": [[["A", "A", "A", "A"], ["A", "A", "A", "A"], ["A", "A", "A", "A"]], "AAAAAAAAAAAA"], "expected": true},
+    {"name": "Almost all", "args": [[["A", "A", "A", "A"], ["A", "A", "A", "A"], ["A", "A", "A", "A"]], "AAAAAAAAAAAB"], "expected": false}
+  ]
+}

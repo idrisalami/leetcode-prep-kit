@@ -1,0 +1,24 @@
+{
+  "slug": "top-k-frequent-elements",
+  "driver": "function",
+  "class": "Solution",
+  "method": "topKFrequent",
+  "params": [{"name": "nums", "type": "int[]"}, {"name": "k", "type": "int"}],
+  "returns": "int[]",
+  "compare": "unordered",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "args": [[1, 1, 1, 2, 2, 3], 2], "expected": [1, 2]},
+    {"name": "Example 2", "example": true, "args": [[1], 1], "expected": [1]},
+    {"name": "Example 3", "example": true, "args": [[1, 2, 1, 2, 1, 2, 3, 1, 3, 2], 2], "expected": [1, 2]},
+    {"name": "Negatives", "args": [[-1, -1, -2, -2, -2, 3], 1], "expected": [-2]},
+    {"name": "All elements", "args": [[1, 2, 2, 3, 3, 3], 3], "expected": [1, 2, 3]},
+    {"name": "With zero", "args": [[0, 0, 0, 5, 5, 9], 2], "expected": [0, 5]},
+    {"name": "Extreme values", "args": [[-10000, -10000, -10000, 10000, 10000, 0], 2], "expected": [-10000, 10000]},
+    {"name": "Most frequent last", "args": [[5, 3, 3, 4, 4, 4], 1], "expected": [4]},
+    {"name": "Most frequent first", "args": [[4, 4, 4, 3, 3, 5], 2], "expected": [4, 3]},
+    {"name": "Unique frequencies", "args": [[7, 7, 7, 7, 8, 8, 8, 9, 9, 10], 3], "expected": [7, 8, 9]},
+    {"name": "Two elements", "args": [[2, 2, 1], 1], "expected": [2]},
+    {"name": "Large input", "args": [{"$lcg": {"n": 100000, "lo": -10000, "hi": 10000, "seed": 11}}, 1], "expected": [-6296]}
+  ]
+}

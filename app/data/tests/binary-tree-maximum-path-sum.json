@@ -1,0 +1,26 @@
+{
+  "slug": "binary-tree-maximum-path-sum",
+  "driver": "function",
+  "class": "Solution",
+  "method": "maxPathSum",
+  "params": [{"name": "root", "type": "TreeNode"}],
+  "returns": "int",
+  "compare": "exact",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "args": [[1, 2, 3]], "expected": 6},
+    {"name": "Example 2", "example": true, "args": [[-10, 9, 20, null, null, 15, 7]], "expected": 42},
+    {"name": "Single negative", "args": [[-3]], "expected": -3},
+    {"name": "Single zero", "args": [[0]], "expected": 0},
+    {"name": "All negative", "args": [[-3, -2, -1]], "expected": -1},
+    {"name": "Negative root, positive children", "args": [[-1, 5, 5]], "expected": 9},
+    {"name": "Negative child skipped", "args": [[2, -1]], "expected": 2},
+    {"name": "Both children join", "args": [[2, -1, 3]], "expected": 5},
+    {"name": "Path avoids the root", "args": [[1, -2, -3, 1, 3, -2, null, -1]], "expected": 3},
+    {"name": "Zeros", "args": [[0, 0, 0]], "expected": 0},
+    {"name": "Negative in the middle", "args": [[1, null, -5, null, 6]], "expected": 6},
+    {"name": "Long positive chain", "args": [[1, 2, null, null, 3, 4, null, null, 5, 6, null, null, 7, 8, null, null, 9, 10, null, null, 11, 12, null, null, 13, 14, null, null, 15, 16, null, null, 17, 18, null, null, 19, 20, null, null, 21, 22, null, null, 23, 24, null, null, 25, 26, null, null, 27, 28, null, null, 29, 30, null, null, 31, 32, null, null, 33, 34, null, null, 35, 36, null, null, 37, 38, null, null, 39, 40, null, null, 41, 42, null, null, 43, 44, null, null, 45, 46, null, null, 47, 48, null, null, 49, 50, null, null, 51, 52, null, null, 53, 54, null, null, 55, 56, null, null, 57, 58, null, null, 59, 60, null, null, 61, 62, null, null, 63, 64, null, null, 65, 66, null, null, 67, 68, null, null, 69, 70, null, null, 71, 72, null, null, 73, 74, null, null, 75, 76, null, null, 77, 78, null, null, 79, 80, null, null, 81, 82, null, null, 83, 84, null, null, 85, 86, null, null, 87, 88, null, null, 89, 90, null, null, 91, 92, null, null, 93, 94, null, null, 95, 96, null, null, 97, 98, null, null, 99, 100]], "expected": 5050},
+    {"name": "Thirty thousand ones", "args": [{"$repeat": [1, 30000]}], "expected": 29},
+    {"name": "Thirty thousand random values", "args": [{"$lcg": {"n": 30000, "lo": -1000, "hi": 1000, "seed": 9}}], "expected": 12344}
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "slug": "car-fleet",
+  "driver": "function",
+  "class": "Solution",
+  "method": "carFleet",
+  "params": [{"name": "target", "type": "int"}, {"name": "position", "type": "int[]"}, {"name": "speed", "type": "int[]"}],
+  "returns": "int",
+  "compare": "exact",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "args": [12, [10, 8, 0, 5, 3], [2, 4, 1, 1, 3]], "expected": 3},
+    {"name": "Example 2", "example": true, "args": [10, [3], [3]], "expected": 1},
+    {"name": "Example 3", "example": true, "args": [100, [0, 2, 4], [4, 2, 1]], "expected": 1},
+    {"name": "Single car", "args": [10, [3], [1]], "expected": 1},
+    {"name": "Rear car catches up", "args": [10, [0, 4], [2, 1]], "expected": 1},
+    {"name": "Rear car slower", "args": [10, [0, 4], [1, 2]], "expected": 2},
+    {"name": "Arrive together", "args": [10, [0, 5], [2, 1]], "expected": 1},
+    {"name": "Catch up before the target", "args": [100, [0, 2, 4], [4, 2, 1]], "expected": 1},
+    {"name": "Three separate fleets", "args": [100, [0, 2, 4], [1, 2, 4]], "expected": 3},
+    {"name": "Merge then separate", "args": [20, [0, 2, 10, 15], [5, 3, 2, 1]], "expected": 2},
+    {"name": "Car at position zero", "args": [1, [0], [1000000]], "expected": 1},
+    {"name": "Largest values tied", "args": [1000000, [0, 999999], [1000000, 1]], "expected": 1},
+    {"name": "Positions out of order", "args": [30, [20, 0, 10, 25, 5], [1, 3, 2, 1, 1]], "expected": 3},
+    {"name": "Large input", "args": [1000000, {"$range": [0, 100000, 1]}, {"$lcg": {"n": 100000, "lo": 1, "hi": 1000000, "seed": 3}}], "expected": 13}
+  ]
+}

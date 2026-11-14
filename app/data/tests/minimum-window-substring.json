@@ -1,0 +1,27 @@
+{
+  "slug": "minimum-window-substring",
+  "driver": "function",
+  "class": "Solution",
+  "method": "minWindow",
+  "params": [{"name": "s", "type": "str"}, {"name": "t", "type": "str"}],
+  "returns": "str",
+  "compare": "exact",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "args": ["ADOBECODEBANC", "ABC"], "expected": "BANC"},
+    {"name": "Example 2", "example": true, "args": ["a", "a"], "expected": "a"},
+    {"name": "Example 3", "example": true, "args": ["a", "aa"], "expected": ""},
+    {"name": "Single equal letters", "args": ["a", "a"], "expected": "a"},
+    {"name": "Single missing letter", "args": ["a", "b"], "expected": ""},
+    {"name": "Needs two of one letter", "args": ["a", "aa"], "expected": ""},
+    {"name": "Window is one letter", "args": ["ab", "b"], "expected": "b"},
+    {"name": "Duplicates inside the window", "args": ["bba", "ab"], "expected": "ba"},
+    {"name": "Repeated letters needed", "args": ["aabdec", "aab"], "expected": "aab"},
+    {"name": "Shrink from the left", "args": ["cabwefgewcwaefgcf", "cae"], "expected": "cwae"},
+    {"name": "Case matters", "args": ["aA", "A"], "expected": "A"},
+    {"name": "Pattern longer than text", "args": ["ab", "abc"], "expected": ""},
+    {"name": "Window at the end", "args": ["xxxxxbac", "abc"], "expected": "bac"},
+    {"name": "Large input without a window", "args": [{"$str": {"chars": "x", "n": 100000, "seed": 1}}, "y"], "expected": ""},
+    {"name": "Large input with equal windows", "args": [{"$str": {"chars": "x", "n": 100000, "seed": 1}}, "xxxxx"], "expected": "xxxxx"}
+  ]
+}

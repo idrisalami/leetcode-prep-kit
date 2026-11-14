@@ -1,0 +1,27 @@
+{
+  "slug": "koko-eating-bananas",
+  "driver": "function",
+  "class": "Solution",
+  "method": "minEatingSpeed",
+  "params": [{"name": "piles", "type": "int[]"}, {"name": "h", "type": "int"}],
+  "returns": "int",
+  "compare": "exact",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "args": [[3, 6, 7, 11], 8], "expected": 4},
+    {"name": "Example 2", "example": true, "args": [[30, 11, 23, 4, 20], 5], "expected": 30},
+    {"name": "Example 3", "example": true, "args": [[30, 11, 23, 4, 20], 6], "expected": 23},
+    {"name": "One pile, enough time", "args": [[1], 10], "expected": 1},
+    {"name": "One pile, one hour", "args": [[10], 1], "expected": 10},
+    {"name": "One pile, three hours", "args": [[10], 3], "expected": 4},
+    {"name": "Equal piles", "args": [[5, 5, 5], 3], "expected": 5},
+    {"name": "Plenty of hours", "args": [[5, 5, 5], 15], "expected": 1},
+    {"name": "Rounding up", "args": [[7, 10], 4], "expected": 5},
+    {"name": "Largest pile, two hours", "args": [[1000000000], 2], "expected": 500000000},
+    {"name": "Largest pile, one hour", "args": [[1000000000], 1], "expected": 1000000000},
+    {"name": "Two largest piles", "args": [[1000000000, 1000000000], 3], "expected": 1000000000},
+    {"name": "Large random piles", "args": [{"$lcg": {"n": 10000, "lo": 1, "hi": 1000000000, "seed": 2}}, 20000], "expected": 323810872},
+    {"name": "Hours equal to piles", "args": [{"$lcg": {"n": 10000, "lo": 1, "hi": 1000000000, "seed": 3}}, 10000], "expected": 999884302},
+    {"name": "Many hours", "args": [{"$lcg": {"n": 10000, "lo": 1, "hi": 1000000000, "seed": 4}}, 1000000000], "expected": 4692}
+  ]
+}

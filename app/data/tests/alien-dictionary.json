@@ -1,0 +1,28 @@
+{
+  "slug": "alien-dictionary",
+  "driver": "function",
+  "class": "Solution",
+  "method": "foreignDictionary",
+  "params": [{"name": "words", "type": "str[]"}],
+  "returns": "str",
+  "compare": "checker:alien_order",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "args": [["z", "o"]], "expected": "zo"},
+    {"name": "Example 2", "example": true, "args": [["hrn", "hrf", "er", "enn", "rfnn"]], "expected": "hernf"},
+    {"name": "Example 3", "example": true, "args": [["abc", "ab"]], "expected": ""},
+    {"name": "One word", "args": [["abc"]], "expected": "abc"},
+    {"name": "One letter", "args": [["a"]], "expected": "a"},
+    {"name": "Cycle of three", "args": [["z", "x", "z"]], "expected": ""},
+    {"name": "Prefix allowed", "args": [["ab", "abc"]], "expected": "abc"},
+    {"name": "Classic", "args": [["wrt", "wrf", "er", "ett", "rftt"]], "expected": "wertf"},
+    {"name": "Equal words", "args": [["z", "z"]], "expected": "z"},
+    {"name": "Free letters", "args": [["ab", "cd"]], "expected": "abdc"},
+    {"name": "Only first difference counts", "args": [["ab", "ba"]], "expected": "ab"},
+    {"name": "Two word cycle", "args": [["ab", "ba", "ab"]], "expected": ""},
+    {"name": "Cycle after a valid pair", "args": [["a", "b", "c", "b"]], "expected": ""},
+    {"name": "Whole alphabet", "args": [["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"]], "expected": "abcdefghijklmnopqrstuvwxyz"},
+    {"name": "Reversed alphabet", "args": [["z", "y", "x", "w", "v", "u", "t", "s", "r", "q", "p", "o", "n", "m", "l", "k", "j", "i", "h", "g", "f", "e", "d", "c", "b", "a"]], "expected": "zyxwvutsrqponmlkjihgfedcba"},
+    {"name": "Long words", "args": [["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab", "baaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"]], "expected": "ab"}
+  ]
+}

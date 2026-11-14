@@ -1,0 +1,25 @@
+{
+  "slug": "distinct-subsequences",
+  "driver": "function",
+  "class": "Solution",
+  "method": "numDistinct",
+  "params": [{"name": "s", "type": "str"}, {"name": "t", "type": "str"}],
+  "returns": "int",
+  "compare": "exact",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "args": ["rabbbit", "rabbit"], "expected": 3},
+    {"name": "Example 2", "example": true, "args": ["babgbag", "bag"], "expected": 5},
+    {"name": "Single equal", "args": ["a", "a"], "expected": 1},
+    {"name": "Single different", "args": ["a", "b"], "expected": 0},
+    {"name": "Longer target", "args": ["abc", "abcd"], "expected": 0},
+    {"name": "Prefix target", "args": ["ab", "a"], "expected": 1},
+    {"name": "Three choose two", "args": ["aaa", "aa"], "expected": 3},
+    {"name": "Five choose two", "args": ["aaaaa", "aa"], "expected": 10},
+    {"name": "Case matters", "args": ["ABab", "ab"], "expected": 1},
+    {"name": "Repeated pattern", "args": ["abab", "ab"], "expected": 3},
+    {"name": "Whole string", "args": ["abc", "abc"], "expected": 1},
+    {"name": "Large equal", "args": [{"$str": {"n": 1000, "chars": ["a"], "seed": 1}}, {"$str": {"n": 1000, "chars": ["a"], "seed": 2}}], "expected": 1},
+    {"name": "Large choose three", "args": [{"$str": {"n": 1000, "chars": ["a"], "seed": 1}}, "aaa"], "expected": 166167000}
+  ]
+}

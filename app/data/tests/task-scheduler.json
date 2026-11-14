@@ -1,0 +1,27 @@
+{
+  "slug": "task-scheduler",
+  "driver": "function",
+  "class": "Solution",
+  "method": "leastInterval",
+  "params": [{"name": "tasks", "type": "char[]"}, {"name": "n", "type": "int"}],
+  "returns": "int",
+  "compare": "exact",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "args": [["A", "A", "A", "B", "B", "B"], 2], "expected": 8},
+    {"name": "Example 2", "example": true, "args": [["A", "C", "A", "B", "D", "B"], 1], "expected": 6},
+    {"name": "Example 3", "example": true, "args": [["A", "A", "A", "B", "B", "B"], 3], "expected": 10},
+    {"name": "Single task no cooldown", "args": [["A"], 0], "expected": 1},
+    {"name": "Single task big cooldown", "args": [["A"], 100], "expected": 1},
+    {"name": "Two same no cooldown", "args": [["A", "A"], 0], "expected": 2},
+    {"name": "Two same cooldown", "args": [["A", "A"], 2], "expected": 4},
+    {"name": "Three same no cooldown", "args": [["A", "A", "A"], 0], "expected": 3},
+    {"name": "All different", "args": [["A", "B", "C"], 100], "expected": 3},
+    {"name": "No idle needed", "args": [["A", "A", "A", "B", "B", "B", "C", "C", "D"], 2], "expected": 9},
+    {"name": "One dominant task", "args": [["A", "A", "A", "A", "A", "A", "B", "C", "D", "E", "F", "G"], 2], "expected": 16},
+    {"name": "Three tied", "args": [["A", "A", "A", "B", "B", "B", "C", "C", "C"], 2], "expected": 9},
+    {"name": "Tied with no cooldown", "args": [["A", "A", "A", "B", "B", "B"], 0], "expected": 6},
+    {"name": "Large input", "args": [{"$repeat": ["A", 10000]}, 100], "expected": 1009900},
+    {"name": "Large no cooldown", "args": [{"$repeat": ["Z", 10000]}, 0], "expected": 10000}
+  ]
+}

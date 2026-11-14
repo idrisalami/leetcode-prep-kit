@@ -1,0 +1,25 @@
+{
+  "slug": "trapping-rain-water",
+  "driver": "function",
+  "class": "Solution",
+  "method": "trap",
+  "params": [{"name": "height", "type": "int[]"}],
+  "returns": "int",
+  "compare": "exact",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "args": [[0, 1, 0, 2, 1, 0, 1, 3, 2, 1, 2, 1]], "expected": 6},
+    {"name": "Example 2", "example": true, "args": [[4, 2, 0, 3, 2, 5]], "expected": 9},
+    {"name": "Single bar", "args": [[3]], "expected": 0},
+    {"name": "Single zero bar", "args": [[0]], "expected": 0},
+    {"name": "Two bars", "args": [[1, 2]], "expected": 0},
+    {"name": "One basin", "args": [[3, 0, 3]], "expected": 3},
+    {"name": "Falling bars", "args": [[5, 4, 3, 2, 1]], "expected": 0},
+    {"name": "Rising bars", "args": [[1, 2, 3, 4, 5]], "expected": 0},
+    {"name": "Wide basin", "args": [[5, 0, 0, 0, 5]], "expected": 15},
+    {"name": "Small basin", "args": [[2, 0, 2]], "expected": 2},
+    {"name": "Uneven walls", "args": [[3, 0, 1, 0, 2]], "expected": 5},
+    {"name": "Largest values", "args": [[100000, 0, 100000]], "expected": 100000},
+    {"name": "Large random bars", "args": [{"$lcg": {"n": 20000, "lo": 0, "hi": 100000, "seed": 4}}], "expected": 1003343662}
+  ]
+}

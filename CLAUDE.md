@@ -78,7 +78,7 @@ Each step ends by ticking its box in the Blocks checklist of `my-prep/plan.md` a
 | `course/reference/decision-rules.md` | Which tool to reach for, by signal |
 | `course/reference/python-toolkit.md` | The standard library and syntax to know by heart |
 | `course/reference/bug-checklist.md` | The pass to run before every submission, and the common bugs |
-| `course/templates/` | The blank versions of the `my-prep/` files. Copied once (§1) |
+| `course/templates/` | The blank versions of the `my-prep/` files. Copied once: by the app on its first start, or by you (§1) |
 | `my-prep/profile.md` | Discovery: target, timeline, goals, experience, history, self-assessment, preferences, other rounds |
 | `my-prep/plan.md` | Timeline, weekly hours, the Blocks checklist, what's next, and the Decisions table for skips and reorders |
 | `my-prep/skills-matrix.md` | Every skill row with its priority and level: Start, Now, Evidence, Last tested |
@@ -89,6 +89,8 @@ Each step ends by ticking its box in the Blocks checklist of `my-prep/plan.md` a
 | `my-prep/next-session.md` | The handoff: what a fresh chat needs to resume |
 | `my-prep/sources/` | Optional: material the user shares, such as job descriptions or recruiter notes. Create it only if they have some |
 | `.scratch/` | Your test scripts for reviews. Gitignored |
+
+**The practice app.** `app/` holds a local practice app the user may run (`python3 app/server.py`). It saves their code in `my-prep/solutions/<slug>.py` and its own state in `my-prep/app/`; never hand-edit that state. It also writes `my-prep/learnings.md`, the log table in `my-prep/bugs.md` and three columns (Now, Evidence, Last tested) of `my-prep/skills-matrix.md`, so read those files before assuming they are yours alone. It also fills Start the first time, while that cell is `?`. In an Evidence cell the app owns only the parts that end in `(app)`: it replaces them on each final submit and keeps the rest. Write your own evidence as separate parts joined by `; ` and never end one in `(app)`. The app may create `my-prep/` from the templates before the first coaching session. If the files are blank templates, discovery has not happened yet: the §1 rule for a blank `next-session.md` already covers it.
 
 ## 5. Never edit `course/`
 

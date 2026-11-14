@@ -548,48 +548,54 @@ Answer each in a sentence or two, without looking back. The answers are at the b
 
 ## Exact match: the canonical template
 
-The one to be able to write from muscle memory. Search space: the indices. Predicate: `nums[mid]` against `target`.
+The one to be able to write from muscle memory. **Worked on [Valid Perfect Square](https://leetcode.com/problems/valid-perfect-square/) (LC 367)**, which is not in the drill set: is `num` the square of a whole number? No square-root call allowed. Search space: the candidate roots `1..num`. Predicate: `mid * mid` against `num`.
 
-**Invariant: *"if `target` is in `nums`, its index is inside `[lo, hi]`."*** Closed range, so `while lo <= hi`.
+**Invariant: *"if `num` has a whole root, it is inside `[lo, hi]`."*** Closed range, so `while lo <= hi`.
 
 ```python
-def search(nums, target):
-    lo, hi = 0, len(nums) - 1          # closed range [lo, hi]
+def isPerfectSquare(num):
+    lo, hi = 1, num                    # closed range [lo, hi] of candidate roots
     while lo <= hi:                    # non-empty while lo <= hi
         mid = (lo + hi) // 2
-        if nums[mid] == target:
-            return mid                 # found: mid is a POSITION, and that's the return type
-        elif nums[mid] < target:
-            lo = mid + 1               # mid and everything left of it is too small: discard
+        if mid * mid == num:
+            return True                # found
+        elif mid * mid < num:
+            lo = mid + 1               # mid and everything below it is too small: discard
         else:
-            hi = mid - 1               # mid and everything right of it is too big: discard
-    return -1                          # range went empty, so not present
+            hi = mid - 1               # mid and everything above it is too big: discard
+    return False                       # range went empty, so no whole root
 ```
 
 **Why each line is what it is:**
 
-- `hi = len(nums) - 1`: `hi` is a real index, because the range is closed.
-- `while lo <= hi`: read off the convention. `lo == hi` is a range of one element, and it still has to be checked.
-- `lo = mid + 1`, **not** `lo = mid`: `nums[mid] < target` *proves* `mid` isn't the answer, so keeping it would be dead weight and, once the range is down to one or two elements, an infinite loop under either loop condition.
-- `return -1`: the empty range is the "not found" signal, which is why exact match wants the closed form.
+- `hi = num`: `hi` is a real candidate, because the range is closed.
+- `while lo <= hi`: read off the convention. `lo == hi` is a range of one candidate, and it still has to be checked.
+- `lo = mid + 1`, **not** `lo = mid`: `mid * mid < num` *proves* `mid` isn't the answer, so keeping it would be dead weight and, once the range is down to one or two candidates, an infinite loop under either loop condition.
+- `return False`: the empty range is the "not found" signal, which is why exact match wants the closed form.
 
-**Trace: `nums = [2, 4, 7, 10, 13, 18]`, `target = 13`:**
+**The same loop on a sorted array.** The candidates become the indices, the comparison becomes `nums[mid]` against `target`, and a hit hands back `mid`: a **position**, not the value stored there. Nothing else changes. That version is row 1 of the drill set.
 
-| iter | `lo` | `hi` | `mid` | `nums[mid]` | vs 13 | action |
+**Trace: `num = 36`:**
+
+| iter | `lo` | `hi` | `mid` | `mid * mid` | vs 36 | action |
 |---|---|---|---|---|---|---|
-| 1 | 0 | 5 | 2 | 7 | too small | `lo = 3` |
-| 2 | 3 | 5 | 4 | 13 | **equal** | `return 4` ✓ |
+| 1 | 1 | 36 | 18 | 324 | too big | `hi = 17` |
+| 2 | 1 | 17 | 9 | 81 | too big | `hi = 8` |
+| 3 | 1 | 8 | 4 | 16 | too small | `lo = 5` |
+| 4 | 5 | 8 | 6 | 36 | **equal** | `return True` ✓ |
 
-**And the not-found case, `target = 5`.** This is the one people never trace, and it's where the off-by-ones live:
+**And the not-found case, `num = 30`.** This is the one people never trace, and it's where the off-by-ones live:
 
-| iter | `lo` | `hi` | `mid` | `nums[mid]` | vs 5 | action |
+| iter | `lo` | `hi` | `mid` | `mid * mid` | vs 30 | action |
 |---|---|---|---|---|---|---|
-| 1 | 0 | 5 | 2 | 7 | too big | `hi = 1` |
-| 2 | 0 | 1 | 0 | 2 | too small | `lo = 1` |
-| 3 | 1 | 1 | 1 | 4 | too small | `lo = 2` |
-| exit | 2 | 1 | n/a | n/a | n/a | `lo > hi`: empty, so `return -1` ✓ |
+| 1 | 1 | 30 | 15 | 225 | too big | `hi = 14` |
+| 2 | 1 | 14 | 7 | 49 | too big | `hi = 6` |
+| 3 | 1 | 6 | 3 | 9 | too small | `lo = 4` |
+| 4 | 4 | 6 | 5 | 25 | too small | `lo = 6` |
+| 5 | 6 | 6 | 6 | 36 | too big | `hi = 5` |
+| exit | 6 | 5 | n/a | n/a | n/a | `lo > hi`: empty, so `return False` ✓ |
 
-Six elements, three probes. `log₂ 6 ≈ 2.6`. And at the exit, `lo = 2` is where 5 would be inserted and `hi = 1` is the last element smaller than it: the bonus from §Which variable holds the answer when the loop ends. **Always trace the not-found path**: a binary search that finds present elements and loops forever on absent ones is the classic half-correct submission.
+Thirty candidates, five probes. `log₂ 30 ≈ 4.9`. And at the exit, `lo = 6` is the first candidate whose square is too big and `hi = 5` is the last whose square is too small: the bonus from §Which variable holds the answer when the loop ends. **Always trace the not-found path**: a binary search that finds present elements and loops forever on absent ones is the classic half-correct submission.
 
 ---
 
@@ -1070,7 +1076,7 @@ The NeetCode 150 binary search list, reordered so the index-based problems come 
 
 | # | Problem | Focus |
 |---|---|---|
-| 1 | [Binary Search](https://leetcode.com/problems/binary-search/) (LC 704) | **The from-memory rep** of §Exact match: the canonical template. It doesn't test discovery; it tests whether the template comes out cold, with the not-found path correct |
+| 1 | [Binary Search](https://leetcode.com/problems/binary-search/) (LC 704) | **The template on a sorted array**: §Exact match: the canonical template, with the indices as the candidates. It doesn't test discovery; it tests whether the template comes out cold, with the not-found path correct |
 | 2 | [Search a 2D Matrix](https://leetcode.com/problems/search-a-2d-matrix/) (LC 74) | **Index arithmetic.** `//` and `%` both used, for different things. Say which is which before writing either |
 | 3 | [Find Minimum in Rotated Sorted Array](https://leetcode.com/problems/find-minimum-in-rotated-sorted-array/) (LC 153) | The first boundary search on a rotated array. Answer the three questions of §Finding the minimum in writing first. ⚑ **Checkpoint** |
 | 4 | [Search in Rotated Sorted Array](https://leetcode.com/problems/search-in-rotated-sorted-array/) (LC 33) | Which half is sorted; a range test on **both** ends; returns an **index** |
@@ -1084,7 +1090,7 @@ The NeetCode 150 binary search list, reordered so the index-based problems come 
 
 **Spares, if a shape needs a second rep:** [LC 35 Search Insert Position](https://leetcode.com/problems/search-insert-position/) (`lower_bound` under another name: written out in §Boundary search; a from-memory rep) · [LC 278 First Bad Version](https://leetcode.com/problems/first-bad-version/) (the predicate form undisguised; the natural bridge to row 5 if the answer-space jump lands badly) · [LC 34 Find First and Last Position of Element in Sorted Array](https://leetcode.com/problems/find-first-and-last-position-of-element-in-sorted-array/) (both bounds in one answer: written out in §Boundary search; a from-memory rep) · [LC 1011 Capacity To Ship Packages Within D Days](https://leetcode.com/problems/capacity-to-ship-packages-within-d-days/) (answer space, second rep) · [LC 162 Find Peak Element](https://leetcode.com/problems/find-peak-element/) (written out in §The mountain array; a from-memory rep).
 
-*Solved in the sections above, so from memory only:* [LC 69](https://leetcode.com/problems/sqrtx/) · [LC 852](https://leetcode.com/problems/peak-index-in-a-mountain-array/) · [LC 1482](https://leetcode.com/problems/minimum-number-of-days-to-make-m-bouquets/).
+*Solved in the sections above, so from memory only:* [LC 367](https://leetcode.com/problems/valid-perfect-square/) · [LC 69](https://leetcode.com/problems/sqrtx/) · [LC 852](https://leetcode.com/problems/peak-index-in-a-mountain-array/) · [LC 1482](https://leetcode.com/problems/minimum-number-of-days-to-make-m-bouquets/).
 
 ## Before you submit anything
 

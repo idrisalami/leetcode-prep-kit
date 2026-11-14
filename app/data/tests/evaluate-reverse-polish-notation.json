@@ -1,0 +1,27 @@
+{
+  "slug": "evaluate-reverse-polish-notation",
+  "driver": "function",
+  "class": "Solution",
+  "method": "evalRPN",
+  "params": [{"name": "tokens", "type": "str[]"}],
+  "returns": "int",
+  "compare": "exact",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "args": [["2", "1", "+", "3", "*"]], "expected": 9},
+    {"name": "Example 2", "example": true, "args": [["4", "13", "5", "/", "+"]], "expected": 6},
+    {"name": "Example 3", "example": true, "args": [["10", "6", "9", "3", "+", "-11", "*", "/", "*", "17", "+", "5", "+"]], "expected": 22},
+    {"name": "Single number", "args": [["7"]], "expected": 7},
+    {"name": "Negative number", "args": [["-3"]], "expected": -3},
+    {"name": "Division rounds down", "args": [["7", "2", "/"]], "expected": 3},
+    {"name": "Negative numerator", "args": [["-7", "2", "/"]], "expected": -3},
+    {"name": "Negative denominator", "args": [["7", "-2", "/"]], "expected": -3},
+    {"name": "Two negatives", "args": [["-7", "-2", "/"]], "expected": 3},
+    {"name": "Small negative quotient", "args": [["-1", "2", "/"]], "expected": 0},
+    {"name": "Operand order for minus", "args": [["3", "5", "-"]], "expected": -2},
+    {"name": "Operand order for divide", "args": [["2", "8", "/"]], "expected": 0},
+    {"name": "Large product", "args": [["200", "200", "*", "200", "*"]], "expected": 8000000},
+    {"name": "Long chain", "args": [["1", "1", "+", "1", "+", "1", "+", "1", "+", "1", "+", "1", "+", "1", "+", "1", "+", "1", "+", "1", "+", "1", "+", "1", "+", "1", "+", "1", "+", "1", "+", "1", "+", "1", "+", "1", "+", "1", "+", "1", "+", "1", "+", "1", "+", "1", "+", "1", "+", "1", "+", "1", "+", "1", "+", "1", "+", "1", "+", "1", "+", "1", "+", "1", "+", "1", "+", "1", "+", "1", "+", "1", "+", "1", "+", "1", "+", "1", "+", "1", "+", "1", "+", "1", "+", "1", "+", "1", "+", "1", "+", "1", "+", "1", "+", "1", "+", "1", "+", "1", "+"]], "expected": 51},
+    {"name": "Nested operations", "args": [["5", "1", "2", "+", "4", "*", "+", "3", "-"]], "expected": 14}
+  ]
+}

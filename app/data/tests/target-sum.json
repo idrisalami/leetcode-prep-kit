@@ -1,0 +1,27 @@
+{
+  "slug": "target-sum",
+  "driver": "function",
+  "class": "Solution",
+  "method": "findTargetSumWays",
+  "params": [{"name": "nums", "type": "int[]"}, {"name": "target", "type": "int"}],
+  "returns": "int",
+  "compare": "exact",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "args": [[1, 1, 1, 1, 1], 3], "expected": 5},
+    {"name": "Example 2", "example": true, "args": [[1], 1], "expected": 1},
+    {"name": "Negative target", "args": [[1], -1], "expected": 1},
+    {"name": "Target too big", "args": [[1], 2], "expected": 0},
+    {"name": "Single zero", "args": [[0], 0], "expected": 2},
+    {"name": "Five zeros", "args": [[0, 0, 0, 0, 0], 0], "expected": 32},
+    {"name": "Zero among others", "args": [[1, 0], 1], "expected": 2},
+    {"name": "Whole sum", "args": [[1000], 1000], "expected": 1},
+    {"name": "Beyond the sum", "args": [[1, 2, 3], 7], "expected": 0},
+    {"name": "Negative whole sum", "args": [[1, 2, 3], -6], "expected": 1},
+    {"name": "Two ways to zero", "args": [[1, 2, 1], 0], "expected": 2},
+    {"name": "Odd total", "args": [[1, 2], 0], "expected": 0},
+    {"name": "Mixed values", "args": [[5, 3, 8, 2, 7, 1], 4], "expected": 4},
+    {"name": "Twenty zeros", "args": [{"$repeat": [0, 20]}, 0], "expected": 1048576},
+    {"name": "Twenty small values", "args": [{"$lcg": {"n": 20, "lo": 0, "hi": 50, "seed": 3}}, 11], "expected": 5596}
+  ]
+}

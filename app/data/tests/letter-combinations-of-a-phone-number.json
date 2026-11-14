@@ -1,0 +1,22 @@
+{
+  "slug": "letter-combinations-of-a-phone-number",
+  "driver": "function",
+  "class": "Solution",
+  "method": "letterCombinations",
+  "params": [{"name": "digits", "type": "str"}],
+  "returns": "str[]",
+  "compare": "unordered",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "args": ["23"], "expected": ["ad", "ae", "af", "bd", "be", "bf", "cd", "ce", "cf"]},
+    {"name": "Example 2", "example": true, "args": ["2"], "expected": ["a", "b", "c"]},
+    {"name": "Four letter key", "args": ["7"], "expected": ["p", "q", "r", "s"]},
+    {"name": "Last key", "args": ["9"], "expected": ["w", "x", "y", "z"]},
+    {"name": "Two keys", "args": ["79"], "expected": ["pw", "px", "py", "pz", "qw", "qx", "qy", "qz", "rw", "rx", "ry", "rz", "sw", "sx", "sy", "sz"]},
+    {"name": "Repeated key", "args": ["222"], "expected": ["aaa", "aab", "aac", "aba", "abb", "abc", "aca", "acb", "acc", "baa", "bab", "bac", "bba", "bbb", "bbc", "bca", "bcb", "bcc", "caa", "cab", "cac", "cba", "cbb", "cbc", "cca", "ccb", "ccc"]},
+    {"name": "Mixed keys", "args": ["2345"], "expected": ["adgj", "adgk", "adgl", "adhj", "adhk", "adhl", "adij", "adik", "adil", "aegj", "aegk", "aegl", "aehj", "aehk", "aehl", "aeij", "aeik", "aeil", "afgj", "afgk", "afgl", "afhj", "afhk", "afhl", "afij", "afik", "afil", "bdgj", "bdgk", "bdgl", "bdhj", "bdhk", "bdhl", "bdij", "bdik", "bdil", "begj", "begk", "begl", "behj", "behk", "behl", "beij", "beik", "beil", "bfgj", "bfgk", "bfgl", "bfhj", "bfhk", "bfhl", "bfij", "bfik", "bfil", "cdgj", "cdgk", "cdgl", "cdhj", "cdhk", "cdhl", "cdij", "cdik", "cdil", "cegj", "cegk", "cegl", "cehj", "cehk", "cehl", "ceij", "ceik", "ceil", "cfgj", "cfgk", "cfgl", "cfhj", "cfhk", "cfhl", "cfij", "cfik", "cfil"]},
+    {"name": "Maximum length", "args": ["7777"], "expected": ["pppp", "pppq", "pppr", "ppps", "ppqp", "ppqq", "ppqr", "ppqs", "pprp", "pprq", "pprr", "pprs", "ppsp", "ppsq", "ppsr", "ppss", "pqpp", "pqpq", "pqpr", "pqps", "pqqp", "pqqq", "pqqr", "pqqs", "pqrp", "pqrq", "pqrr", "pqrs", "pqsp", "pqsq", "pqsr", "pqss", "prpp", "prpq", "prpr", "prps", "prqp", "prqq", "prqr", "prqs", "prrp", "prrq", "prrr", "prrs", "prsp", "prsq", "prsr", "prss", "pspp", "pspq", "pspr", "psps", "psqp", "psqq", "psqr", "psqs", "psrp", "psrq", "psrr", "psrs", "pssp", "pssq", "pssr", "psss", "qppp", "qppq", "qppr", "qpps", "qpqp", "qpqq", "qpqr", "qpqs", "qprp", "qprq", "qprr", "qprs", "qpsp", "qpsq", "qpsr", "qpss", "qqpp", "qqpq", "qqpr", "qqps", "qqqp", "qqqq", "qqqr", "qqqs", "qqrp", "qqrq", "qqrr", "qqrs", "qqsp", "qqsq", "qqsr", "qqss", "qrpp", "qrpq", "qrpr", "qrps", "qrqp", "qrqq", "qrqr", "qrqs", "qrrp", "qrrq", "qrrr", "qrrs", "qrsp", "qrsq", "qrsr", "qrss", "qspp", "qspq", "qspr", "qsps", "qsqp", "qsqq", "qsqr", "qsqs", "qsrp", "qsrq", "qsrr", "qsrs", "qssp", "qssq", "qssr", "qsss", "rppp", "rppq", "rppr", "rpps", "rpqp", "rpqq", "rpqr", "rpqs", "rprp", "rprq", "rprr", "rprs", "rpsp", "rpsq", "rpsr", "rpss", "rqpp", "rqpq", "rqpr", "rqps", "rqqp", "rqqq", "rqqr", "rqqs", "rqrp", "rqrq", "rqrr", "rqrs", "rqsp", "rqsq", "rqsr", "rqss", "rrpp", "rrpq", "rrpr", "rrps", "rrqp", "rrqq", "rrqr", "rrqs", "rrrp", "rrrq", "rrrr", "rrrs", "rrsp", "rrsq", "rrsr", "rrss", "rspp", "rspq", "rspr", "rsps", "rsqp", "rsqq", "rsqr", "rsqs", "rsrp", "rsrq", "rsrr", "rsrs", "rssp", "rssq", "rssr", "rsss", "sppp", "sppq", "sppr", "spps", "spqp", "spqq", "spqr", "spqs", "sprp", "sprq", "sprr", "sprs", "spsp", "spsq", "spsr", "spss", "sqpp", "sqpq", "sqpr", "sqps", "sqqp", "sqqq", "sqqr", "sqqs", "sqrp", "sqrq", "sqrr", "sqrs", "sqsp", "sqsq", "sqsr", "sqss", "srpp", "srpq", "srpr", "srps", "srqp", "srqq", "srqr", "srqs", "srrp", "srrq", "srrr", "srrs", "srsp", "srsq", "srsr", "srss", "sspp", "sspq", "sspr", "ssps", "ssqp", "ssqq", "ssqr", "ssqs", "ssrp", "ssrq", "ssrr", "ssrs", "sssp", "sssq", "sssr", "ssss"]},
+    {"name": "Reversed pair", "args": ["32"], "expected": ["da", "db", "dc", "ea", "eb", "ec", "fa", "fb", "fc"]},
+    {"name": "High keys", "args": ["98"], "expected": ["wt", "wu", "wv", "xt", "xu", "xv", "yt", "yu", "yv", "zt", "zu", "zv"]}
+  ]
+}

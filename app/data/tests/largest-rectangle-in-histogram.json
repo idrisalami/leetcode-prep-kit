@@ -1,0 +1,27 @@
+{
+  "slug": "largest-rectangle-in-histogram",
+  "driver": "function",
+  "class": "Solution",
+  "method": "largestRectangleArea",
+  "params": [{"name": "heights", "type": "int[]"}],
+  "returns": "int",
+  "compare": "exact",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "args": [[2, 1, 5, 6, 2, 3]], "expected": 10},
+    {"name": "Example 2", "example": true, "args": [[2, 4]], "expected": 4},
+    {"name": "Single bar", "args": [[5]], "expected": 5},
+    {"name": "Single zero bar", "args": [[0]], "expected": 0},
+    {"name": "Zero bars", "args": [[0, 0]], "expected": 0},
+    {"name": "Equal bars", "args": [[3, 3, 3]], "expected": 9},
+    {"name": "Rising bars", "args": [[1, 2, 3, 4, 5]], "expected": 9},
+    {"name": "Falling bars", "args": [[5, 4, 3, 2, 1]], "expected": 9},
+    {"name": "Valley", "args": [[2, 1, 2]], "expected": 3},
+    {"name": "Zero between bars", "args": [[3, 0, 3]], "expected": 3},
+    {"name": "Tall spike", "args": [[1, 10000, 1]], "expected": 10000},
+    {"name": "Rising to the end", "args": [[1, 2, 3]], "expected": 4},
+    {"name": "Largest values", "args": [[10000, 10000, 10000, 10000, 10000]], "expected": 50000},
+    {"name": "Large equal bars", "args": [{"$repeat": [10000, 100000]}], "expected": 1000000000},
+    {"name": "Large random bars", "args": [{"$lcg": {"n": 100000, "lo": 0, "hi": 10000, "seed": 9}}], "expected": 125580}
+  ]
+}

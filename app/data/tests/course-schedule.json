@@ -1,0 +1,24 @@
+{
+  "slug": "course-schedule",
+  "driver": "function",
+  "class": "Solution",
+  "method": "canFinish",
+  "params": [{"name": "numCourses", "type": "int"}, {"name": "prerequisites", "type": "int[][]"}],
+  "returns": "bool",
+  "compare": "exact",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "args": [2, [[1, 0]]], "expected": true},
+    {"name": "Example 2", "example": true, "args": [2, [[1, 0], [0, 1]]], "expected": false},
+    {"name": "One course", "args": [1, []], "expected": true},
+    {"name": "Self prerequisite", "args": [1, [[0, 0]]], "expected": false},
+    {"name": "No prerequisites", "args": [5, []], "expected": true},
+    {"name": "Diamond", "args": [4, [[1, 0], [2, 0], [3, 1], [3, 2]]], "expected": true},
+    {"name": "Cycle in second part", "args": [5, [[1, 0], [3, 2], [4, 3], [2, 4]]], "expected": false},
+    {"name": "Long chain", "args": [6, [[1, 0], [2, 1], [3, 2], [4, 3], [5, 4]]], "expected": true},
+    {"name": "Reverse chain", "args": [4, [[0, 1], [1, 2], [2, 3]]], "expected": true},
+    {"name": "Cycle with tail", "args": [4, [[1, 0], [2, 1], [1, 2], [3, 2]]], "expected": false},
+    {"name": "Many courses", "args": [2000, []], "expected": true},
+    {"name": "Layered graph", "args": [50, [[2, 0], [3, 0], [2, 1], [3, 1], [4, 2], [5, 2], [4, 3], [5, 3], [6, 4], [7, 4], [6, 5], [7, 5], [8, 6], [9, 6], [8, 7], [9, 7], [10, 8], [11, 8], [10, 9], [11, 9], [12, 10], [13, 10], [12, 11], [13, 11], [14, 12], [15, 12], [14, 13], [15, 13], [16, 14], [17, 14], [16, 15], [17, 15], [18, 16], [19, 16], [18, 17], [19, 17], [20, 18], [21, 18], [20, 19], [21, 19], [22, 20], [23, 20], [22, 21], [23, 21], [24, 22], [25, 22], [24, 23], [25, 23], [26, 24], [27, 24], [26, 25], [27, 25], [28, 26], [29, 26], [28, 27], [29, 27], [30, 28], [31, 28], [30, 29], [31, 29], [32, 30], [33, 30], [32, 31], [33, 31], [34, 32], [35, 32], [34, 33], [35, 33], [36, 34], [37, 34], [36, 35], [37, 35], [38, 36], [39, 36], [38, 37], [39, 37], [40, 38], [41, 38], [40, 39], [41, 39], [42, 40], [43, 40], [42, 41], [43, 41], [44, 42], [45, 42], [44, 43], [45, 43], [46, 44], [47, 44], [46, 45], [47, 45], [48, 46], [49, 46], [48, 47], [49, 47]]], "expected": true}
+  ]
+}

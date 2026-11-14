@@ -1,0 +1,24 @@
+{
+  "slug": "palindromic-substrings",
+  "driver": "function",
+  "class": "Solution",
+  "method": "countSubstrings",
+  "params": [{"name": "s", "type": "str"}],
+  "returns": "int",
+  "compare": "exact",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "args": ["abc"], "expected": 3},
+    {"name": "Example 2", "example": true, "args": ["aaa"], "expected": 6},
+    {"name": "Single character", "args": ["a"], "expected": 1},
+    {"name": "Two different", "args": ["ab"], "expected": 2},
+    {"name": "Two equal", "args": ["aa"], "expected": 3},
+    {"name": "Even palindrome", "args": ["abba"], "expected": 6},
+    {"name": "Four equal", "args": ["aaaa"], "expected": 10},
+    {"name": "Odd palindrome", "args": ["abcba"], "expected": 7},
+    {"name": "Racecar", "args": ["racecar"], "expected": 10},
+    {"name": "Overlapping", "args": ["abab"], "expected": 6},
+    {"name": "Long run of one letter", "args": [{"$str": {"n": 1000, "chars": ["a"], "seed": 1}}], "expected": 500500},
+    {"name": "Large input", "args": [{"$str": {"n": 1000, "chars": ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"], "seed": 9}}], "expected": 1089}
+  ]
+}

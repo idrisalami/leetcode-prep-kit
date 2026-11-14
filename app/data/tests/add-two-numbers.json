@@ -1,0 +1,24 @@
+{
+  "slug": "add-two-numbers",
+  "driver": "function",
+  "class": "Solution",
+  "method": "addTwoNumbers",
+  "params": [{"name": "l1", "type": "ListNode"}, {"name": "l2", "type": "ListNode"}],
+  "returns": "ListNode",
+  "compare": "exact",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "args": [[2, 4, 3], [5, 6, 4]], "expected": [7, 0, 8]},
+    {"name": "Example 2", "example": true, "args": [[0], [0]], "expected": [0]},
+    {"name": "Example 3", "example": true, "args": [[9, 9, 9, 9, 9, 9, 9], [9, 9, 9, 9]], "expected": [8, 9, 9, 9, 0, 0, 0, 1]},
+    {"name": "Zero plus zero", "args": [[0], [0]], "expected": [0]},
+    {"name": "One digit each", "args": [[3], [4]], "expected": [7]},
+    {"name": "Carry out of the last digit", "args": [[9], [1]], "expected": [0, 1]},
+    {"name": "Carry through all digits", "args": [[9, 9, 9, 9], [1]], "expected": [0, 0, 0, 0, 1]},
+    {"name": "Second is longer", "args": [[1], [9, 9]], "expected": [0, 0, 1]},
+    {"name": "Different lengths", "args": [[2, 4, 3, 1], [5, 6]], "expected": [7, 0, 4, 1]},
+    {"name": "Trailing zero digit", "args": [[0, 1], [0, 1]], "expected": [0, 2]},
+    {"name": "Hundred digits plus one", "args": [{"$repeat": [9, 100]}, [1]], "expected": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]},
+    {"name": "Two hundred-digit numbers", "args": [{"$repeat": [9, 100]}, {"$repeat": [9, 100]}], "expected": [8, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 1]}
+  ]
+}

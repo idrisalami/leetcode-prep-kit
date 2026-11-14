@@ -1,0 +1,24 @@
+{
+  "slug": "kth-largest-element-in-a-stream",
+  "driver": "design",
+  "class": "KthLargest",
+  "method": null,
+  "params": [],
+  "returns": null,
+  "compare": "exact",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "ops": ["KthLargest", "add", "add", "add", "add", "add"], "args": [[3, [4, 5, 8, 2]], [3], [5], [10], [9], [4]], "expected": [null, 4, 5, 5, 8, 8]},
+    {"name": "Example 2", "example": true, "ops": ["KthLargest", "add", "add", "add", "add"], "args": [[4, [7, 7, 7, 7, 8, 3]], [2], [10], [9], [9]], "expected": [null, 7, 7, 7, 8]},
+    {"name": "Empty start, k one", "ops": ["KthLargest", "add", "add", "add", "add", "add"], "args": [[1, []], [-3], [-2], [-4], [0], [4]], "expected": [null, -3, -2, -2, 0, 4]},
+    {"name": "Single add", "ops": ["KthLargest", "add"], "args": [[1, []], [7]], "expected": [null, 7]},
+    {"name": "Growing from one", "ops": ["KthLargest", "add", "add", "add", "add", "add"], "args": [[2, [0]], [-1], [1], [-2], [-4], [3]], "expected": [null, -1, 0, 0, 0, 1]},
+    {"name": "Duplicates", "ops": ["KthLargest", "add", "add", "add"], "args": [[2, [5, 5, 5]], [5], [6], [6]], "expected": [null, 5, 5, 6]},
+    {"name": "k equals size", "ops": ["KthLargest", "add", "add", "add", "add"], "args": [[3, [1, 2, 3]], [0], [4], [4], [5]], "expected": [null, 1, 2, 3, 4]},
+    {"name": "Ascending adds", "ops": ["KthLargest", "add", "add", "add", "add"], "args": [[3, [1, 2, 3]], [4], [5], [6], [7]], "expected": [null, 2, 3, 4, 5]},
+    {"name": "Descending adds", "ops": ["KthLargest", "add", "add", "add"], "args": [[2, [100, 50]], [40], [30], [20]], "expected": [null, 50, 50, 50]},
+    {"name": "Negatives", "ops": ["KthLargest", "add", "add", "add"], "args": [[2, [-10, -20, -5]], [-30], [-1], [-4]], "expected": [null, -10, -5, -4]},
+    {"name": "Largest k at start", "ops": ["KthLargest", "add", "add", "add"], "args": [[5, [1, 2, 3, 4]], [9], [0], [10]], "expected": [null, 1, 1, 2]},
+    {"name": "Large initial list", "ops": ["KthLargest", "add", "add", "add", "add"], "args": [[5000, {"$lcg": {"n": 10000, "lo": -10000, "hi": 10000, "seed": 3}}], [-10000], [10000], [0], [10000]], "expected": [null, -48, -47, -46, -41]}
+  ]
+}

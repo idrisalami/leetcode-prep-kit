@@ -1,0 +1,25 @@
+{
+  "slug": "group-anagrams",
+  "driver": "function",
+  "class": "Solution",
+  "method": "groupAnagrams",
+  "params": [{"name": "strs", "type": "str[]"}],
+  "returns": "str[][]",
+  "compare": "unordered_nested",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "args": [["eat", "tea", "tan", "ate", "nat", "bat"]], "expected": [["bat"], ["nat", "tan"], ["ate", "eat", "tea"]]},
+    {"name": "Example 2", "example": true, "args": [[""]], "expected": [[""]]},
+    {"name": "Example 3", "example": true, "args": [["a"]], "expected": [["a"]]},
+    {"name": "Several empty strings", "args": [["", "", ""]], "expected": [["", "", ""]]},
+    {"name": "No anagrams", "args": [["abc", "def", "ghi"]], "expected": [["abc"], ["def"], ["ghi"]]},
+    {"name": "One big group", "args": [["listen", "silent", "enlist", "tinsel"]], "expected": [["listen", "silent", "enlist", "tinsel"]]},
+    {"name": "Repeated words", "args": [["a", "a", "b"]], "expected": [["a", "a"], ["b"]]},
+    {"name": "Mixed lengths", "args": [["ab", "abc", "ba", "cab", "a"]], "expected": [["ab", "ba"], ["abc", "cab"], ["a"]]},
+    {"name": "Same letters, other counts", "args": [["aab", "abb", "aa", "a"]], "expected": [["aab"], ["abb"], ["aa"], ["a"]]},
+    {"name": "Same letter sums", "args": [["ad", "bc"]], "expected": [["ad"], ["bc"]]},
+    {"name": "Empty and letters", "args": [["", "a", "", "b"]], "expected": [["", ""], ["a"], ["b"]]},
+    {"name": "Many empty strings", "args": [["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]], "expected": [["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]]},
+    {"name": "Many equal words", "args": [["abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc"]], "expected": [["abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc", "abc"]]}
+  ]
+}

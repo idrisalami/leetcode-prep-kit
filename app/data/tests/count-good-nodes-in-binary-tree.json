@@ -1,0 +1,27 @@
+{
+  "slug": "count-good-nodes-in-binary-tree",
+  "driver": "function",
+  "class": "Solution",
+  "method": "goodNodes",
+  "params": [{"name": "root", "type": "TreeNode"}],
+  "returns": "int",
+  "compare": "exact",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "args": [[3, 1, 4, 3, null, 1, 5]], "expected": 4},
+    {"name": "Example 2", "example": true, "args": [[3, 3, null, 4, 2]], "expected": 3},
+    {"name": "Example 3", "example": true, "args": [[1]], "expected": 1},
+    {"name": "Single node", "args": [[1]], "expected": 1},
+    {"name": "Equal values", "args": [[2, 2, 2]], "expected": 3},
+    {"name": "Decreasing chain", "args": [[5, 4, null, 3, null, 2]], "expected": 1},
+    {"name": "Increasing chain", "args": [[1, null, 2, null, 3, null, 4]], "expected": 4},
+    {"name": "All negative", "args": [[-1, -2, -3]], "expected": 1},
+    {"name": "Negative with a good child", "args": [[-3, -1, -2]], "expected": 3},
+    {"name": "Sibling branches", "args": [[5, 3, 7, 4, null, 6]], "expected": 2},
+    {"name": "Zeros", "args": [[0, 0, 0, -1]], "expected": 3},
+    {"name": "Max in the middle", "args": [[2, 5, null, null, 1, 5, null, null, 4, 6]], "expected": 4},
+    {"name": "Large, increasing", "args": [{"$range": [-10000, 10000, 1]}], "expected": 20000},
+    {"name": "Large, decreasing", "args": [{"$range": [10000, -10000, -1]}], "expected": 1},
+    {"name": "Large, equal values", "args": [{"$repeat": [7, 100000]}], "expected": 100000}
+  ]
+}

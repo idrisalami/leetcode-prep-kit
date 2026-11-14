@@ -1,0 +1,26 @@
+{
+  "slug": "find-the-duplicate-number",
+  "driver": "function",
+  "class": "Solution",
+  "method": "findDuplicate",
+  "params": [{"name": "nums", "type": "int[]"}],
+  "returns": "int",
+  "compare": "exact",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "args": [[1, 3, 4, 2, 2]], "expected": 2},
+    {"name": "Example 2", "example": true, "args": [[3, 1, 3, 4, 2]], "expected": 3},
+    {"name": "Example 3", "example": true, "args": [[3, 3, 3, 3, 3]], "expected": 3},
+    {"name": "Smallest input", "args": [[1, 1]], "expected": 1},
+    {"name": "Two values", "args": [[2, 2, 2]], "expected": 2},
+    {"name": "Duplicate first", "args": [[1, 1, 2]], "expected": 1},
+    {"name": "Duplicate last", "args": [[2, 1, 2]], "expected": 2},
+    {"name": "Duplicate is the maximum", "args": [[1, 2, 3, 4, 5, 5]], "expected": 5},
+    {"name": "Duplicate is one", "args": [[2, 3, 4, 5, 1, 1]], "expected": 1},
+    {"name": "Spread out", "args": [[2, 5, 9, 6, 9, 3, 8, 9, 7, 1]], "expected": 9},
+    {"name": "Sorted with a repeat", "args": [[1, 2, 3, 4, 4, 5, 6]], "expected": 4},
+    {"name": "Large, all the maximum", "args": [{"$repeat": [100000, 100001]}], "expected": 100000},
+    {"name": "Large, all ones", "args": [{"$repeat": [1, 100001]}], "expected": 1},
+    {"name": "Large, middle value", "args": [{"$repeat": [50000, 100001]}], "expected": 50000}
+  ]
+}

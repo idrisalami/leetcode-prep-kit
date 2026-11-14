@@ -1,0 +1,24 @@
+{
+  "slug": "graph-valid-tree",
+  "driver": "function",
+  "class": "Solution",
+  "method": "validTree",
+  "params": [{"name": "n", "type": "int"}, {"name": "edges", "type": "int[][]"}],
+  "returns": "bool",
+  "compare": "exact",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "args": [5, [[0, 1], [0, 2], [0, 3], [1, 4]]], "expected": true},
+    {"name": "Example 2", "example": true, "args": [5, [[0, 1], [1, 2], [2, 3], [1, 3], [1, 4]]], "expected": false},
+    {"name": "One node", "args": [1, []], "expected": true},
+    {"name": "Two nodes apart", "args": [2, []], "expected": false},
+    {"name": "Two nodes joined", "args": [2, [[0, 1]]], "expected": true},
+    {"name": "Path", "args": [3, [[0, 1], [1, 2]]], "expected": true},
+    {"name": "Triangle", "args": [3, [[0, 1], [1, 2], [2, 0]]], "expected": false},
+    {"name": "Cycle and isolated node", "args": [4, [[0, 1], [1, 2], [0, 2]]], "expected": false},
+    {"name": "Reversed pairs", "args": [4, [[3, 2], [2, 1], [1, 0]]], "expected": true},
+    {"name": "Two parts", "args": [4, [[0, 1], [2, 3]]], "expected": false},
+    {"name": "Star", "args": [5, [[0, 1], [0, 2], [0, 3], [0, 4]]], "expected": true},
+    {"name": "Many nodes no edges", "args": [2000, []], "expected": false}
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "slug": "max-area-of-island",
+  "driver": "function",
+  "class": "Solution",
+  "method": "maxAreaOfIsland",
+  "params": [{"name": "grid", "type": "int[][]"}],
+  "returns": "int",
+  "compare": "exact",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "args": [[[0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0], [0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0], [0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 0, 0], [0, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0], [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0]]], "expected": 6},
+    {"name": "Example 2", "example": true, "args": [[[0, 0, 0, 0, 0, 0, 0, 0]]], "expected": 0},
+    {"name": "Single land cell", "args": [[[1]]], "expected": 1},
+    {"name": "Single water cell", "args": [[[0]]], "expected": 0},
+    {"name": "Diagonal cells", "args": [[[1, 0], [0, 1]]], "expected": 1},
+    {"name": "Largest first", "args": [[[1, 1, 1], [0, 0, 0], [1, 0, 1]]], "expected": 3},
+    {"name": "Largest last", "args": [[[1, 0, 1], [0, 0, 1], [1, 0, 1], [0, 0, 1]]], "expected": 4},
+    {"name": "Corner pocket", "args": [[[0, 1], [1, 1]]], "expected": 3},
+    {"name": "Ring", "args": [[[1, 1, 1], [1, 0, 1], [1, 1, 1]]], "expected": 8},
+    {"name": "Tie", "args": [[[1, 1, 0, 1, 1]]], "expected": 2},
+    {"name": "One column", "args": [[[1], [1], [0], [1], [1], [1]]], "expected": 3},
+    {"name": "Full grid", "args": [{"$repeat": [{"$repeat": [1, 50]}, 50]}], "expected": 2500}
+  ]
+}

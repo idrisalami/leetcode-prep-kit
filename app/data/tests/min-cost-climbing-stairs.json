@@ -1,0 +1,23 @@
+{
+  "slug": "min-cost-climbing-stairs",
+  "driver": "function",
+  "class": "Solution",
+  "method": "minCostClimbingStairs",
+  "params": [{"name": "cost", "type": "int[]"}],
+  "returns": "int",
+  "compare": "exact",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "args": [[10, 15, 20]], "expected": 15},
+    {"name": "Example 2", "example": true, "args": [[1, 100, 1, 1, 1, 100, 1, 1, 100, 1]], "expected": 6},
+    {"name": "Smallest input", "args": [[0, 0]], "expected": 0},
+    {"name": "Two steps", "args": [[10, 15]], "expected": 10},
+    {"name": "Start on second step", "args": [[1, 100]], "expected": 1},
+    {"name": "Zero then one", "args": [[0, 0, 0, 1]], "expected": 0},
+    {"name": "Expensive ends", "args": [[50, 1, 1, 1, 50]], "expected": 2},
+    {"name": "Descending costs", "args": [[9, 8, 7, 6, 5, 4, 3]], "expected": 18},
+    {"name": "Ascending costs", "args": [[1, 2, 3, 4, 5, 6, 7]], "expected": 12},
+    {"name": "All maximum", "args": [{"$repeat": [999, 1000]}], "expected": 499500},
+    {"name": "Large input", "args": [{"$lcg": {"n": 1000, "lo": 0, "hi": 999, "seed": 11}}], "expected": 212468}
+  ]
+}

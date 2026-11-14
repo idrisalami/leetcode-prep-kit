@@ -1,0 +1,29 @@
+{
+  "slug": "interleaving-string",
+  "driver": "function",
+  "class": "Solution",
+  "method": "isInterleave",
+  "params": [{"name": "s1", "type": "str"}, {"name": "s2", "type": "str"}, {"name": "s3", "type": "str"}],
+  "returns": "bool",
+  "compare": "exact",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "args": ["aabcc", "dbbca", "aadbbcbcac"], "expected": true},
+    {"name": "Example 2", "example": true, "args": ["aabcc", "dbbca", "aadbbbaccc"], "expected": false},
+    {"name": "Example 3", "example": true, "args": ["", "", ""], "expected": true},
+    {"name": "Empty first", "args": ["", "a", "a"], "expected": true},
+    {"name": "Empty second", "args": ["a", "", "a"], "expected": true},
+    {"name": "Empty second mismatch", "args": ["a", "", "b"], "expected": false},
+    {"name": "Two singles", "args": ["a", "b", "ab"], "expected": true},
+    {"name": "Two singles swapped", "args": ["a", "b", "ba"], "expected": true},
+    {"name": "Length mismatch", "args": ["abc", "d", "ab"], "expected": false},
+    {"name": "Needs backtracking", "args": ["aa", "ab", "aaba"], "expected": true},
+    {"name": "Second first", "args": ["aa", "ab", "abaa"], "expected": true},
+    {"name": "Crossing letters", "args": ["ab", "bc", "bbac"], "expected": false},
+    {"name": "Equal letters", "args": ["a", "a", "aa"], "expected": true},
+    {"name": "Disjoint letters", "args": ["abc", "def", "abdecf"], "expected": true},
+    {"name": "Output too long", "args": ["a", "b", "abb"], "expected": false},
+    {"name": "Large true", "args": ["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"], "expected": true},
+    {"name": "Large false", "args": ["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab"], "expected": false}
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "slug": "longest-common-subsequence",
+  "driver": "function",
+  "class": "Solution",
+  "method": "longestCommonSubsequence",
+  "params": [{"name": "text1", "type": "str"}, {"name": "text2", "type": "str"}],
+  "returns": "int",
+  "compare": "exact",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "args": ["abcde", "ace"], "expected": 3},
+    {"name": "Example 2", "example": true, "args": ["abc", "abc"], "expected": 3},
+    {"name": "Example 3", "example": true, "args": ["abc", "def"], "expected": 0},
+    {"name": "Single equal", "args": ["a", "a"], "expected": 1},
+    {"name": "Single different", "args": ["a", "b"], "expected": 0},
+    {"name": "Reversed", "args": ["abc", "cba"], "expected": 1},
+    {"name": "Interleaved", "args": ["bl", "yby"], "expected": 1},
+    {"name": "Palindrome pair", "args": ["abcba", "abcbcba"], "expected": 5},
+    {"name": "Repeated letters", "args": ["aaaa", "aa"], "expected": 2},
+    {"name": "Scattered", "args": ["oxcpqrsvwf", "shmtulqrypy"], "expected": 2},
+    {"name": "Fully reversed", "args": ["abcde", "edcba"], "expected": 1},
+    {"name": "Subsequence is whole", "args": ["ace", "abcde"], "expected": 3},
+    {"name": "Large equal", "args": [{"$str": {"n": 1000, "chars": ["a"], "seed": 1}}, {"$str": {"n": 1000, "chars": ["a"], "seed": 2}}], "expected": 1000},
+    {"name": "Large input", "args": [{"$str": {"n": 700, "chars": ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"], "seed": 21}}, {"$str": {"n": 700, "chars": ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"], "seed": 22}}], "expected": 219}
+  ]
+}

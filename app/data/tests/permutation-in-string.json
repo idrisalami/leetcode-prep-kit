@@ -1,0 +1,26 @@
+{
+  "slug": "permutation-in-string",
+  "driver": "function",
+  "class": "Solution",
+  "method": "checkInclusion",
+  "params": [{"name": "s1", "type": "str"}, {"name": "s2", "type": "str"}],
+  "returns": "bool",
+  "compare": "exact",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "args": ["ab", "eidbaooo"], "expected": true},
+    {"name": "Example 2", "example": true, "args": ["ab", "eidboaoo"], "expected": false},
+    {"name": "Single equal letters", "args": ["a", "a"], "expected": true},
+    {"name": "Single different letters", "args": ["a", "b"], "expected": false},
+    {"name": "Pattern longer than text", "args": ["ab", "a"], "expected": false},
+    {"name": "Reversed pair", "args": ["ab", "ba"], "expected": true},
+    {"name": "Same letters, other counts", "args": ["abc", "ccccbbbbaaaa"], "expected": false},
+    {"name": "Repeated letters at the end", "args": ["aab", "abaa"], "expected": true},
+    {"name": "Permutation at the end", "args": ["adc", "dcda"], "expected": true},
+    {"name": "Same length equal", "args": ["abc", "cba"], "expected": true},
+    {"name": "Same length different", "args": ["abc", "abd"], "expected": false},
+    {"name": "Counts differ", "args": ["hello", "ooolleoooleh"], "expected": false},
+    {"name": "Permutation that is not a reversal", "args": ["abc", "xbacx"], "expected": true},
+    {"name": "Large random input", "args": [{"$str": {"chars": "abcdefghijklmnopqrstuvwxyz", "n": 5000, "seed": 1}}, {"$str": {"chars": "abcdefghijklmnopqrstuvwxyz", "n": 10000, "seed": 2}}], "expected": false}
+  ]
+}

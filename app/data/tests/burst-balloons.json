@@ -1,0 +1,26 @@
+{
+  "slug": "burst-balloons",
+  "driver": "function",
+  "class": "Solution",
+  "method": "maxCoins",
+  "params": [{"name": "nums", "type": "int[]"}],
+  "returns": "int",
+  "compare": "exact",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "args": [[3, 1, 5, 8]], "expected": 167},
+    {"name": "Example 2", "example": true, "args": [[1, 5]], "expected": 10},
+    {"name": "Single balloon", "args": [[5]], "expected": 5},
+    {"name": "Single zero", "args": [[0]], "expected": 0},
+    {"name": "All zeros", "args": [[0, 0, 0]], "expected": 0},
+    {"name": "Three ones", "args": [[1, 1, 1]], "expected": 3},
+    {"name": "Two maximum", "args": [[100, 100]], "expected": 10100},
+    {"name": "Classic", "args": [[7, 9, 8, 0, 7, 1, 3, 5, 5, 2, 3]], "expected": 1654},
+    {"name": "Three values", "args": [[2, 4, 3]], "expected": 33},
+    {"name": "Zero in the middle", "args": [[3, 0, 5]], "expected": 20},
+    {"name": "Ascending", "args": [[1, 2, 3, 4, 5]], "expected": 110},
+    {"name": "Descending", "args": [[5, 4, 3, 2, 1]], "expected": 110},
+    {"name": "Large input", "args": [{"$lcg": {"n": 130, "lo": 0, "hi": 100, "seed": 12}}], "expected": 44230316},
+    {"name": "Large all equal", "args": [{"$repeat": [100, 130]}], "expected": 128010100}
+  ]
+}

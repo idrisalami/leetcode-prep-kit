@@ -1,0 +1,22 @@
+{
+  "slug": "reconstruct-itinerary",
+  "driver": "function",
+  "class": "Solution",
+  "method": "findItinerary",
+  "params": [{"name": "tickets", "type": "str[][]"}],
+  "returns": "str[]",
+  "compare": "exact",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "args": [[["MUC", "LHR"], ["JFK", "MUC"], ["SFO", "SJC"], ["LHR", "SFO"]]], "expected": ["JFK", "MUC", "LHR", "SFO", "SJC"]},
+    {"name": "Example 2", "example": true, "args": [[["JFK", "SFO"], ["JFK", "ATL"], ["SFO", "ATL"], ["ATL", "JFK"], ["ATL", "SFO"]]], "expected": ["JFK", "ATL", "JFK", "SFO", "ATL", "SFO"]},
+    {"name": "Single ticket", "args": [[["JFK", "ATL"]]], "expected": ["JFK", "ATL"]},
+    {"name": "Dead end first", "args": [[["JFK", "KUL"], ["JFK", "NRT"], ["NRT", "JFK"]]], "expected": ["JFK", "NRT", "JFK", "KUL"]},
+    {"name": "Round trip", "args": [[["JFK", "AAA"], ["AAA", "JFK"]]], "expected": ["JFK", "AAA", "JFK"]},
+    {"name": "Duplicate tickets", "args": [[["JFK", "ABC"], ["ABC", "JFK"], ["JFK", "ABC"]]], "expected": ["JFK", "ABC", "JFK", "ABC"]},
+    {"name": "Smaller first", "args": [[["JFK", "BBB"], ["JFK", "AAA"], ["AAA", "JFK"], ["BBB", "JFK"]]], "expected": ["JFK", "AAA", "JFK", "BBB", "JFK"]},
+    {"name": "Straight line", "args": [[["CCC", "DDD"], ["BBB", "CCC"], ["JFK", "BBB"]]], "expected": ["JFK", "BBB", "CCC", "DDD"]},
+    {"name": "Many repeats", "args": [[["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["JFK", "AAA"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["AAA", "JFK"], ["JFK", "ZZZ"]]], "expected": ["JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "AAA", "JFK", "ZZZ"]},
+    {"name": "Two loops", "args": [[["JFK", "AAA"], ["AAA", "BBB"], ["BBB", "JFK"], ["JFK", "CCC"], ["CCC", "DDD"], ["DDD", "JFK"]]], "expected": ["JFK", "AAA", "BBB", "JFK", "CCC", "DDD", "JFK"]}
+  ]
+}

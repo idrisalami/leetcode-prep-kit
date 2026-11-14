@@ -1,0 +1,24 @@
+{
+  "slug": "valid-anagram",
+  "driver": "function",
+  "class": "Solution",
+  "method": "isAnagram",
+  "params": [{"name": "s", "type": "str"}, {"name": "t", "type": "str"}],
+  "returns": "bool",
+  "compare": "exact",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "args": ["anagram", "nagaram"], "expected": true},
+    {"name": "Example 2", "example": true, "args": ["rat", "car"], "expected": false},
+    {"name": "Single letter", "args": ["a", "a"], "expected": true},
+    {"name": "Different letters", "args": ["a", "b"], "expected": false},
+    {"name": "Different lengths", "args": ["ab", "a"], "expected": false},
+    {"name": "Same counts reversed", "args": ["listen", "silent"], "expected": true},
+    {"name": "Same letters, other counts", "args": ["aab", "abb"], "expected": false},
+    {"name": "Repeated letters", "args": ["aacc", "ccac"], "expected": false},
+    {"name": "Same letter sums", "args": ["ad", "bc"], "expected": false},
+    {"name": "Identical words", "args": ["abc", "abc"], "expected": true},
+    {"name": "Large equal input", "args": [{"$str": {"chars": "abcdefghijklmnopqrstuvwxyz", "n": 50000, "seed": 3}}, {"$str": {"chars": "abcdefghijklmnopqrstuvwxyz", "n": 50000, "seed": 3}}], "expected": true},
+    {"name": "Large different input", "args": [{"$str": {"chars": "abcdefghijklmnopqrstuvwxyz", "n": 50000, "seed": 3}}, {"$str": {"chars": "abcdefghijklmnopqrstuvwxyz", "n": 50000, "seed": 4}}], "expected": false}
+  ]
+}

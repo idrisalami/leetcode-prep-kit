@@ -18,7 +18,7 @@
 - [0.9 Self-check](#09-self-check)
 - [Converging pointers](#converging-pointers)
   - [The symmetric case: no sort needed](#the-symmetric-case-no-sort-needed)
-  - [The limiting side: discard the shorter wall](#the-limiting-side-discard-the-shorter-wall)
+  - [The limiting side: one end is finished](#the-limiting-side-one-end-is-finished)
   - [Sorted input, and triplets](#sorted-input-and-triplets)
 - [The sliding window](#the-sliding-window)
   - [The variable window, minimising](#the-variable-window-minimising)
@@ -28,6 +28,7 @@
 - [When the window needs its maximum](#when-the-window-needs-its-maximum)
 - [Common pointer and window mistakes](#common-pointer-and-window-mistakes)
 - [Drill set — cold, no IDE, no running](#drill-set--cold-no-ide-no-running)
+- [Also on the practice list](#also-on-the-practice-list)
 - [Before you submit anything](#before-you-submit-anything)
 - [Self-check answers](#self-check-answers)
 <!-- /toc -->
@@ -263,48 +264,52 @@ Answer each in a sentence or two, without looking back. The answers are at the b
 
 ### The symmetric case: no sort needed
 
-**Worked on [Valid Palindrome](https://leetcode.com/problems/valid-palindrome/) (LC 125)**, which is not in the drill set: is the string a palindrome once you ignore case and everything that is not a letter or digit?
+**Worked on [Reverse Only Letters](https://leetcode.com/problems/reverse-only-letters/) (LC 917)**, which is not in the drill set: reverse the letters of a string and leave every other character where it is.
 
 ```python
-def isPalindrome(s):
-    lo, hi = 0, len(s) - 1
+def reverseOnlyLetters(s):
+    chars = list(s)                             # a str can't be changed in place
+    lo, hi = 0, len(chars) - 1
     while lo < hi:
-        if not s[lo].isalnum():
+        if not chars[lo].isalpha():
             lo += 1                             # skip from the left
-        elif not s[hi].isalnum():
+        elif not chars[hi].isalpha():
             hi -= 1                             # skip from the right
-        elif s[lo].lower() != s[hi].lower():
-            return False
         else:
-            lo += 1                             # a matching pair: both move
+            chars[lo], chars[hi] = chars[hi], chars[lo]
+            lo += 1                             # a swapped pair: both move
             hi -= 1
-    return True
+    return "".join(chars)
 ```
 
-*Invariant:* the characters outside `[lo, hi]`, ignoring the skipped ones, already read the same from both ends.
+*Invariant:* every character outside `[lo, hi]` is already in its final place.
 
-**One decision per iteration.** Each branch moves only the pointers it has to and then goes back to the `while`, which rechecks `lo < hi`. Skipping with an inner `while` instead needs its own `lo < hi` guard, or it runs off the end on a string of punctuation. The `elif` chain needs no extra guard. No sort: a palindrome is symmetric from the two ends, which is all the discard argument needs.
+**One decision per iteration.** Each branch moves only the pointers it has to and then goes back to the `while`, which rechecks `lo < hi`. Skipping with an inner `while` instead needs its own `lo < hi` guard, or it runs off the end on a string of punctuation. The `elif` chain needs no extra guard. No sort: the job is symmetric from the two ends, the first letter trading places with the last, which is all the discard argument needs. Comparing the two ends instead of swapping them is the same walk.
 
-### The limiting side: discard the shorter wall
+### The limiting side: one end is finished
 
-**Worked on [Container With Most Water](https://leetcode.com/problems/container-with-most-water/) (LC 11)**, which is not in the drill set: given wall heights, pick two walls that hold the most water. The water between walls `lo` and `hi` is `(hi - lo) * min(height[lo], height[hi])`.
+**Worked on [Boats to Save People](https://leetcode.com/problems/boats-to-save-people/) (LC 881)**, which is not in the drill set: each boat carries at most two people and at most `limit` in weight, and nobody weighs more than `limit`. Find the fewest boats that carry everyone.
 
 ```python
-def maxArea(height):
-    lo, hi = 0, len(height) - 1
-    best = 0
-    while lo < hi:
-        best = max(best, (hi - lo) * min(height[lo], height[hi]))
-        if height[lo] < height[hi]:
-            lo += 1                     # the left wall limits every pair it is still in
-        else:
-            hi -= 1
-    return best
+def numRescueBoats(people, limit):
+    people.sort()
+    lo, hi = 0, len(people) - 1
+    boats = 0
+    while lo <= hi:
+        if people[lo] + people[hi] <= limit:
+            lo += 1                     # the lightest shares the heaviest's boat
+        hi -= 1                         # the heaviest leaves on this boat either way
+        boats += 1
+    return boats
 ```
 
-**The discard argument.** Suppose `height[lo]` is the shorter wall. Every other pair that still uses `lo` pairs it with some wall between `lo` and `hi`. That pair is *narrower*, and its water level is still at most `height[lo]`, because the shorter wall caps it. So none of those pairs can beat the one just measured, and `lo` is finished. Moving the taller wall instead could only lose: the width shrinks and the cap stays.
+**The discard argument.** Look at the heaviest person left, `people[hi]`. If they can't share with the lightest, they can't share with anyone, because everyone else weighs at least as much as the lightest: they take a boat alone. If they can share with the lightest, seating those two together is never worse: whoever else the lightest could have sat with is no heavier than `people[hi]`, so the seats can be swapped without overloading a boat. Either way `people[hi]` is finished after one comparison. The heavy end limits what a boat can take, so it is the end that decides.
 
-*Invariant:* every pair with an end outside `[lo, hi]` has been measured or proved no better than `best`. O(n) time, O(1) space, no sort: the shorter wall supplies the order.
+**`lo <= hi`, not `lo < hi`.** When `lo == hi`, one person is still waiting, and they need a boat, so the loop runs once more. The pair template stops at `lo < hi` because an element can't pair with itself; here a single element left is real work. Read the operator off what one remaining element means (§The invariant is the correctness tool).
+
+*Invariant:* everyone outside `[lo, hi]` is seated, and `boats` counts the boats used so far. O(n log n) time for the sort; the walk after it is O(n).
+
+**The limit doesn't always need a sort.** Here the sort put the limiting element at one end. Some inputs come with the limit built in: when two ends bound a result together and one of them caps every pair it is in, comparing the two ends says which one is finished, and nothing has to be sorted. Working out which end that is, and why it can't do better, is left for the practice list.
 
 ### Sorted input, and triplets
 
@@ -447,7 +452,17 @@ Ordered by how often each happens.
 
 **Spares, if a shape needs a second rep:** [LC 167 Two Sum II - Input Array Is Sorted](https://leetcode.com/problems/two-sum-ii-input-array-is-sorted/) (converging, undisguised) · [LC 977 Squares of a Sorted Array](https://leetcode.com/problems/squares-of-a-sorted-array/) (converging, writing from the back) · [LC 424 Longest Repeating Character Replacement](https://leetcode.com/problems/longest-repeating-character-replacement/) (a maximising window with a frequency map) · [LC 438 Find All Anagrams in a String](https://leetcode.com/problems/find-all-anagrams-in-a-string/) (a fixed window with a frequency map) · [LC 76 Minimum Window Substring](https://leetcode.com/problems/minimum-window-substring/) (a minimising window, harder state).
 
-*Solved in the sections above, so from memory only:* [LC 125](https://leetcode.com/problems/valid-palindrome/) · [LC 11](https://leetcode.com/problems/container-with-most-water/) · [LC 209](https://leetcode.com/problems/minimum-size-subarray-sum/) · [LC 1004](https://leetcode.com/problems/max-consecutive-ones-iii/) · [LC 643](https://leetcode.com/problems/maximum-average-subarray-i/).
+*Solved in the sections above, so from memory only:* [LC 917](https://leetcode.com/problems/reverse-only-letters/) · [LC 881](https://leetcode.com/problems/boats-to-save-people/) · [LC 209](https://leetcode.com/problems/minimum-size-subarray-sum/) · [LC 1004](https://leetcode.com/problems/max-consecutive-ones-iii/) · [LC 643](https://leetcode.com/problems/maximum-average-subarray-i/).
+
+## Also on the practice list
+
+These problems are on the app's practice list but are not drills in this module. Work them after the drill set if you want more reps.
+
+| # | Problem | Focus |
+|---|---|---|
+| 1 | [Valid Palindrome](https://leetcode.com/problems/valid-palindrome/) (LC 125) | Converging, no sort. Decide what happens to a character that doesn't count before writing the loop |
+| 2 | [Container With Most Water](https://leetcode.com/problems/container-with-most-water/) (LC 11) | Converging, no sort. After each measurement, say which end is finished and why before moving it |
+| 3 | [Permutation in String](https://leetcode.com/problems/permutation-in-string/) (LC 567) | A fixed window with a frequency map |
 
 ## Before you submit anything
 

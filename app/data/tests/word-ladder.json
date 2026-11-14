@@ -1,0 +1,24 @@
+{
+  "slug": "word-ladder",
+  "driver": "function",
+  "class": "Solution",
+  "method": "ladderLength",
+  "params": [{"name": "beginWord", "type": "str"}, {"name": "endWord", "type": "str"}, {"name": "wordList", "type": "str[]"}],
+  "returns": "int",
+  "compare": "exact",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "args": ["hit", "cog", ["hot", "dot", "dog", "lot", "log", "cog"]], "expected": 5},
+    {"name": "Example 2", "example": true, "args": ["hit", "cog", ["hot", "dot", "dog", "lot", "log"]], "expected": 0},
+    {"name": "Single letters", "args": ["a", "c", ["a", "b", "c"]], "expected": 2},
+    {"name": "Adjacent words", "args": ["hit", "hot", ["hot"]], "expected": 2},
+    {"name": "End missing", "args": ["hit", "cog", ["hot", "dot", "dog"]], "expected": 0},
+    {"name": "Two letters differ", "args": ["ab", "cd", ["cd"]], "expected": 0},
+    {"name": "Start in list", "args": ["hot", "dog", ["hot", "dot", "dog"]], "expected": 3},
+    {"name": "Shorter route", "args": ["red", "tax", ["ted", "tex", "red", "tax", "tad", "den", "rex", "pee"]], "expected": 4},
+    {"name": "Long words", "args": ["abcdefghij", "abcdefghzz", ["abcdefghiz", "abcdefghzz", "abcdefghij"]], "expected": 3},
+    {"name": "Detour", "args": ["aaa", "ccc", ["aab", "abb", "bbb", "bbc", "bcc", "ccc", "aac", "acc"]], "expected": 4},
+    {"name": "Dead ends", "args": ["cat", "dog", ["bat", "cot", "cog", "dot", "dog", "cut", "cit"]], "expected": 4},
+    {"name": "Many words", "args": ["aaaaaaaa", "bbbbbbbb", ["aaaaaaab", "aaaaaaba", "aaaaaabb", "aaaaabaa", "aaaaabab", "aaaaabba", "aaaaabbb", "aaaabaaa", "aaaabaab", "aaaababa", "aaaababb", "aaaabbaa", "aaaabbab", "aaaabbba", "aaaabbbb", "aaabaaaa", "aaabaaab", "aaabaaba", "aaabaabb", "aaababaa", "aaababab", "aaababba", "aaababbb", "aaabbaaa", "aaabbaab", "aaabbaba", "aaabbabb", "aaabbbaa", "aaabbbab", "aaabbbba", "aaabbbbb", "aabaaaaa", "aabaaaab", "aabaaaba", "aabaaabb", "aabaabaa", "aabaabab", "aabaabba", "aabaabbb", "aababaaa", "aababaab", "aabababa", "aabababb", "aababbaa", "aababbab", "aababbba", "aababbbb", "aabbaaaa", "aabbaaab", "aabbaaba", "aabbaabb", "aabbabaa", "aabbabab", "aabbabba", "aabbabbb", "aabbbaaa", "aabbbaab", "aabbbaba", "aabbbabb", "aabbbbaa", "aabbbbab", "aabbbbba", "aabbbbbb", "abaaaaaa", "abaaaaab", "abaaaaba", "abaaaabb", "abaaabaa", "abaaabab", "abaaabba", "abaaabbb", "abaabaaa", "abaabaab", "abaababa", "abaababb", "abaabbaa", "abaabbab", "abaabbba", "abaabbbb", "ababaaaa", "ababaaab", "ababaaba", "ababaabb", "abababaa", "abababab", "abababba", "abababbb", "ababbaaa", "ababbaab", "ababbaba", "ababbabb", "ababbbaa", "ababbbab", "ababbbba", "ababbbbb", "abbaaaaa", "abbaaaab", "abbaaaba", "abbaaabb", "abbaabaa", "abbaabab", "abbaabba", "abbaabbb", "abbabaaa", "abbabaab", "abbababa", "abbababb", "abbabbaa", "abbabbab", "abbabbba", "abbabbbb", "abbbaaaa", "abbbaaab", "abbbaaba", "abbbaabb", "abbbabaa", "abbbabab", "abbbabba", "abbbabbb", "abbbbaaa", "abbbbaab", "abbbbaba", "abbbbabb", "abbbbbaa", "abbbbbab", "abbbbbba", "abbbbbbb", "baaaaaaa", "baaaaaab", "baaaaaba", "baaaaabb", "baaaabaa", "baaaabab", "baaaabba", "baaaabbb", "baaabaaa", "baaabaab", "baaababa", "baaababb", "baaabbaa", "baaabbab", "baaabbba", "baaabbbb", "baabaaaa", "baabaaab", "baabaaba", "baabaabb", "baababaa", "baababab", "baababba", "baababbb", "baabbaaa", "baabbaab", "baabbaba", "baabbabb", "baabbbaa", "baabbbab", "baabbbba", "baabbbbb", "babaaaaa", "babaaaab", "babaaaba", "babaaabb", "babaabaa", "babaabab", "babaabba", "babaabbb", "bababaaa", "bababaab", "babababa", "babababb", "bababbaa", "bababbab", "bababbba", "bababbbb", "babbaaaa", "babbaaab", "babbaaba", "babbaabb", "babbabaa", "babbabab", "babbabba", "babbabbb", "babbbaaa", "babbbaab", "babbbaba", "babbbabb", "babbbbaa", "babbbbab", "babbbbba", "babbbbbb", "bbaaaaaa", "bbaaaaab", "bbaaaaba", "bbaaaabb", "bbaaabaa", "bbaaabab", "bbaaabba", "bbaaabbb", "bbaabaaa", "bbaabaab", "bbaababa", "bbaababb", "bbaabbaa", "bbaabbab", "bbaabbba", "bbaabbbb", "bbabaaaa", "bbabaaab", "bbabaaba", "bbabaabb", "bbababaa", "bbababab", "bbababba", "bbababbb", "bbabbaaa", "bbabbaab", "bbabbaba", "bbabbabb", "bbabbbaa", "bbabbbab", "bbabbbba", "bbabbbbb", "bbbaaaaa", "bbbaaaab", "bbbaaaba", "bbbaaabb", "bbbaabaa", "bbbaabab", "bbbaabba", "bbbaabbb", "bbbabaaa", "bbbabaab", "bbbababa", "bbbababb", "bbbabbaa", "bbbabbab", "bbbabbba", "bbbabbbb", "bbbbaaaa", "bbbbaaab", "bbbbaaba", "bbbbaabb", "bbbbabaa", "bbbbabab", "bbbbabba", "bbbbabbb", "bbbbbaaa", "bbbbbaab", "bbbbbaba", "bbbbbabb", "bbbbbbaa", "bbbbbbab", "bbbbbbba", "bbbbbbbb"]], "expected": 9}
+  ]
+}

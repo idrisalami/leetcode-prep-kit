@@ -1,0 +1,27 @@
+{
+  "slug": "longest-substring-without-repeating-characters",
+  "driver": "function",
+  "class": "Solution",
+  "method": "lengthOfLongestSubstring",
+  "params": [{"name": "s", "type": "str"}],
+  "returns": "int",
+  "compare": "exact",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "args": ["abcabcbb"], "expected": 3},
+    {"name": "Example 2", "example": true, "args": ["bbbbb"], "expected": 1},
+    {"name": "Example 3", "example": true, "args": ["pwwkew"], "expected": 3},
+    {"name": "Empty string", "args": [""], "expected": 0},
+    {"name": "Single character", "args": ["a"], "expected": 1},
+    {"name": "Two equal characters", "args": ["aa"], "expected": 1},
+    {"name": "Two different characters", "args": ["ab"], "expected": 2},
+    {"name": "Repeat of an early character", "args": ["abba"], "expected": 2},
+    {"name": "Single space", "args": [" "], "expected": 1},
+    {"name": "Restart in the middle", "args": ["dvdf"], "expected": 3},
+    {"name": "Old repeat behind the window", "args": ["tmmzuxt"], "expected": 5},
+    {"name": "All different", "args": ["abcdefg"], "expected": 7},
+    {"name": "Symbols", "args": ["!@#!@"], "expected": 3},
+    {"name": "All printable characters", "args": [" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~ !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"], "expected": 95},
+    {"name": "Large random input", "args": [{"$str": {"chars": "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", "n": 100000, "seed": 6}}], "expected": 35}
+  ]
+}

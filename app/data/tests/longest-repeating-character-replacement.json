@@ -1,0 +1,26 @@
+{
+  "slug": "longest-repeating-character-replacement",
+  "driver": "function",
+  "class": "Solution",
+  "method": "characterReplacement",
+  "params": [{"name": "s", "type": "str"}, {"name": "k", "type": "int"}],
+  "returns": "int",
+  "compare": "exact",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "args": ["ABAB", 2], "expected": 4},
+    {"name": "Example 2", "example": true, "args": ["AABABBA", 1], "expected": 4},
+    {"name": "Single letter", "args": ["A", 0], "expected": 1},
+    {"name": "Single letter with spare changes", "args": ["A", 1], "expected": 1},
+    {"name": "No changes allowed", "args": ["AB", 0], "expected": 1},
+    {"name": "One change allowed", "args": ["AB", 1], "expected": 2},
+    {"name": "All different, all changes", "args": ["ABCDE", 5], "expected": 5},
+    {"name": "All different, no changes", "args": ["ABCDE", 0], "expected": 1},
+    {"name": "All equal", "args": ["AAAA", 0], "expected": 4},
+    {"name": "Run at the end", "args": ["AABBB", 0], "expected": 3},
+    {"name": "One change at the end", "args": ["AAAB", 1], "expected": 4},
+    {"name": "Change spent inside a window", "args": ["ABCABC", 2], "expected": 4},
+    {"name": "Too few changes", "args": ["ABAA", 0], "expected": 2},
+    {"name": "Large random input", "args": [{"$str": {"chars": "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "n": 100000, "seed": 12}}, 5000], "expected": 5260}
+  ]
+}

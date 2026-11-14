@@ -1,0 +1,26 @@
+{
+  "slug": "last-stone-weight",
+  "driver": "function",
+  "class": "Solution",
+  "method": "lastStoneWeight",
+  "params": [{"name": "stones", "type": "int[]"}],
+  "returns": "int",
+  "compare": "exact",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "args": [[2, 7, 4, 1, 8, 1]], "expected": 1},
+    {"name": "Example 2", "example": true, "args": [[1]], "expected": 1},
+    {"name": "Single stone", "args": [[5]], "expected": 5},
+    {"name": "Two equal", "args": [[3, 3]], "expected": 0},
+    {"name": "Two ones", "args": [[1, 1]], "expected": 0},
+    {"name": "Two different", "args": [[1, 2]], "expected": 1},
+    {"name": "Three equal", "args": [[2, 2, 2]], "expected": 2},
+    {"name": "Chain", "args": [[10, 4, 3]], "expected": 3},
+    {"name": "Thirty ones", "args": [[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]], "expected": 0},
+    {"name": "Even count at maximum", "args": [[1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000]], "expected": 0},
+    {"name": "Odd count at maximum", "args": [[1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000]], "expected": 1000},
+    {"name": "Ascending", "args": [[1, 2, 3, 4, 5, 6, 7]], "expected": 0},
+    {"name": "Pairs cancel", "args": [[3, 3, 2, 1, 1]], "expected": 0},
+    {"name": "Needs resorting", "args": [[8, 7, 6, 1]], "expected": 4}
+  ]
+}

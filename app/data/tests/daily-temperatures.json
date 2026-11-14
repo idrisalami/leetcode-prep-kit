@@ -1,0 +1,25 @@
+{
+  "slug": "daily-temperatures",
+  "driver": "function",
+  "class": "Solution",
+  "method": "dailyTemperatures",
+  "params": [{"name": "temperatures", "type": "int[]"}],
+  "returns": "int[]",
+  "compare": "exact",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "args": [[73, 74, 75, 71, 69, 72, 76, 73]], "expected": [1, 1, 4, 2, 1, 1, 0, 0]},
+    {"name": "Example 2", "example": true, "args": [[30, 40, 50, 60]], "expected": [1, 1, 1, 0]},
+    {"name": "Example 3", "example": true, "args": [[30, 60, 90]], "expected": [1, 1, 0]},
+    {"name": "Single day", "args": [[50]], "expected": [0]},
+    {"name": "Two rising days", "args": [[30, 31]], "expected": [1, 0]},
+    {"name": "Equal days", "args": [[50, 50, 50]], "expected": [0, 0, 0]},
+    {"name": "Falling days", "args": [[100, 90, 80]], "expected": [0, 0, 0]},
+    {"name": "Rising days", "args": [[30, 40, 50, 60]], "expected": [1, 1, 1, 0]},
+    {"name": "Warmer day at the end", "args": [[50, 40, 40, 40, 51]], "expected": [4, 3, 2, 1, 0]},
+    {"name": "Equal then warmer", "args": [[60, 60, 61]], "expected": [2, 1, 0]},
+    {"name": "Mixed days", "args": [[89, 62, 70, 58, 47, 47, 46, 76, 100, 70]], "expected": [8, 1, 5, 4, 3, 2, 1, 1, 0, 0]},
+    {"name": "Extreme values", "args": [[30, 100, 30, 100]], "expected": [1, 0, 1, 0]},
+    {"name": "Long falling then rising", "args": [[80, 79, 78, 77, 76, 75, 74, 73, 72, 71, 70, 69, 68, 67, 66, 65, 64, 63, 62, 61, 60, 59, 58, 57, 56, 55, 54, 53, 52, 51, 50, 49, 48, 47, 46, 45, 44, 43, 42, 41, 40, 39, 38, 37, 36, 35, 34, 33, 32, 31, 90]], "expected": [50, 49, 48, 47, 46, 45, 44, 43, 42, 41, 40, 39, 38, 37, 36, 35, 34, 33, 32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0]}
+  ]
+}

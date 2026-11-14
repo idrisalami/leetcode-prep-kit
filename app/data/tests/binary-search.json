@@ -1,0 +1,26 @@
+{
+  "slug": "binary-search",
+  "driver": "function",
+  "class": "Solution",
+  "method": "search",
+  "params": [{"name": "nums", "type": "int[]"}, {"name": "target", "type": "int"}],
+  "returns": "int",
+  "compare": "exact",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "args": [[-1, 0, 3, 5, 9, 12], 9], "expected": 4},
+    {"name": "Example 2", "example": true, "args": [[-1, 0, 3, 5, 9, 12], 2], "expected": -1},
+    {"name": "Single element found", "args": [[5], 5], "expected": 0},
+    {"name": "Single element missing", "args": [[5], 3], "expected": -1},
+    {"name": "Below all values", "args": [[1, 2, 3], -4], "expected": -1},
+    {"name": "Above all values", "args": [[1, 2, 3], 9], "expected": -1},
+    {"name": "First element", "args": [[1, 2, 3, 4], 1], "expected": 0},
+    {"name": "Last element", "args": [[1, 2, 3, 4], 4], "expected": 3},
+    {"name": "Two elements, second", "args": [[1, 3], 3], "expected": 1},
+    {"name": "Missing between values", "args": [[1, 3, 5], 4], "expected": -1},
+    {"name": "Extreme values", "args": [[-9999, 0, 9999], 9999], "expected": 2},
+    {"name": "Extreme low value", "args": [[-9999, 0, 9999], -9999], "expected": 0},
+    {"name": "Largest input", "args": [{"$range": [-5000, 5000, 1]}, 4999], "expected": 9999},
+    {"name": "Largest input, missing", "args": [{"$range": [-5000, 5000, 1]}, 5000], "expected": -1}
+  ]
+}

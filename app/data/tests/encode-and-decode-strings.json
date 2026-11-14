@@ -1,0 +1,25 @@
+{
+  "slug": "encode-and-decode-strings",
+  "driver": "codec_strings",
+  "class": "Solution",
+  "method": "encode",
+  "params": [{"name": "strs", "type": "str[]"}],
+  "returns": "str[]",
+  "compare": "exact",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "args": [["Hello", "World"]], "expected": ["Hello", "World"]},
+    {"name": "Example 2", "example": true, "args": [[""]], "expected": [""]},
+    {"name": "Empty list", "args": [[]], "expected": []},
+    {"name": "Two empty strings", "args": [["", ""]], "expected": ["", ""]},
+    {"name": "Single character", "args": [["a"]], "expected": ["a"]},
+    {"name": "Hash characters", "args": [["#", "##", "3#abc"]], "expected": ["#", "##", "3#abc"]},
+    {"name": "Digit strings", "args": [["12", "3", "4#5"]], "expected": ["12", "3", "4#5"]},
+    {"name": "Separator characters", "args": [["a,b", ",", ";", ":", "|", " "]], "expected": ["a,b", ",", ";", ":", "|", " "]},
+    {"name": "Line breaks and tabs", "args": [["a\nb", "\t", "\r\n", "\u0000x"]], "expected": ["a\nb", "\t", "\r\n", "\u0000x"]},
+    {"name": "Long strings", "args": [["#1a1: a1: a :1#1#1ab# # #b#b:1:b:1a1# a1:1# # a a1# # #bab:b:1a1a1a a1#1# #1aba1a #1# #b:1aba ab: a1abab#ba # #1#1: :1:1:b# :1a1# : a1: #b:1a #b#b:b#b", "90251x46y44y0zz131548yz26268y5132040x202598xxyy898750186z3702108x213z46x074868487617617919x8197169z0149xx48524645236z82yz985473zy694550y894z461xy8x6151z2x94x3zy501z31294858217z97y6y8128195291y7x0xz19", "z"]], "expected": ["#1a1: a1: a :1#1#1ab# # #b#b:1:b:1a1# a1:1# # a a1# # #bab:b:1a1a1a a1#1# #1aba1a #1# #b:1aba ab: a1abab#ba # #1#1: :1:1:b# :1a1# : a1: #b:1a #b#b:b#b", "90251x46y44y0zz131548yz26268y5132040x202598xxyy898750186z3702108x213z46x074868487617617919x8197169z0149xx48524645236z82yz985473zy694550y894z461xy8x6151z2x94x3zy501z31294858217z97y6y8128195291y7x0xz19", "z"]},
+    {"name": "Length prefix lookalike", "args": [["10#abcdefghij", "5#", "0#"]], "expected": ["10#abcdefghij", "5#", "0#"]},
+    {"name": "Many empty strings", "args": [["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]], "expected": ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]},
+    {"name": "Extended ASCII", "args": [["caf\u00e9", "\u00ff\u00fe", "\u00a0"]], "expected": ["caf\u00e9", "\u00ff\u00fe", "\u00a0"]}
+  ]
+}

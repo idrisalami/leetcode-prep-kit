@@ -27,6 +27,7 @@
   - [Sort, then one scan](#sort-then-one-scan)
 - [Common array and hashing mistakes](#common-array-and-hashing-mistakes)
 - [Drill set — cold, no IDE, no running](#drill-set--cold-no-ide-no-running)
+- [Also on the practice list](#also-on-the-practice-list)
 - [Before you submit anything](#before-you-submit-anything)
 - [Self-check answers](#self-check-answers)
 <!-- /toc -->
@@ -558,6 +559,17 @@ Ordered by how often each happens.
 **Spares, if a shape needs a second rep:** [LC 383 Ransom Note](https://leetcode.com/problems/ransom-note/) (counting, like row 3) · [LC 448 Find All Numbers Disappeared in an Array](https://leetcode.com/problems/find-all-numbers-disappeared-in-an-array/) (a set, then the O(1)-space follow-up) · [LC 303 Range Sum Query - Immutable](https://leetcode.com/problems/range-sum-query-immutable/) (§0.5, primitive 3, undisguised) · [LC 1365 How Many Numbers Are Smaller Than the Current Number](https://leetcode.com/problems/how-many-numbers-are-smaller-than-the-current-number/) (sort, then a dict) · [LC 128 Longest Consecutive Sequence](https://leetcode.com/problems/longest-consecutive-sequence/) (a set, and why sorting is the slower answer here).
 
 *Solved in the sections above, so from memory only:* [LC 219](https://leetcode.com/problems/contains-duplicate-ii/) · [LC 205](https://leetcode.com/problems/isomorphic-strings/) · [LC 53](https://leetcode.com/problems/maximum-subarray/) · [LC 560](https://leetcode.com/problems/subarray-sum-equals-k/) · [LC 56](https://leetcode.com/problems/merge-intervals/).
+
+## Also on the practice list
+
+These problems are on the app's practice list but are not drills in this module. Work them after the drill set if you want more reps.
+
+| # | Problem | Focus |
+|---|---|---|
+| 1 | [Valid Sudoku](https://leetcode.com/problems/valid-sudoku/) (LC 36) | Remember: a set per row, per column and per box |
+| 2 | [Encode and Decode Strings](https://leetcode.com/problems/encode-and-decode-strings/) (LC 271) 🔒 | Key design: a format that can be reversed. Premium: skip if locked |
+
+🔒 = LeetCode Premium. A 🔒 problem with a **Code it** button in the app can be solved there without Premium: the app brings its own statement and tests.
 
 ## Before you submit anything
 

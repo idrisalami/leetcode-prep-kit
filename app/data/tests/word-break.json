@@ -1,0 +1,26 @@
+{
+  "slug": "word-break",
+  "driver": "function",
+  "class": "Solution",
+  "method": "wordBreak",
+  "params": [{"name": "s", "type": "str"}, {"name": "wordDict", "type": "str[]"}],
+  "returns": "bool",
+  "compare": "exact",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "args": ["leetcode", ["leet", "code"]], "expected": true},
+    {"name": "Example 2", "example": true, "args": ["applepenapple", ["apple", "pen"]], "expected": true},
+    {"name": "Example 3", "example": true, "args": ["catsandog", ["cats", "dog", "sand", "and", "cat"]], "expected": false},
+    {"name": "Single letter match", "args": ["a", ["a"]], "expected": true},
+    {"name": "Single letter miss", "args": ["a", ["b"]], "expected": false},
+    {"name": "Reused word", "args": ["aaaaaaa", ["aaaa", "aaa"]], "expected": true},
+    {"name": "Cannot fill", "args": ["aaaaaaa", ["aaaa", "aa"]], "expected": false},
+    {"name": "Short words beat long", "args": ["cars", ["car", "ca", "rs"]], "expected": true},
+    {"name": "Needs the short prefix", "args": ["abcd", ["a", "abc", "b", "cd"]], "expected": true},
+    {"name": "Prefix only", "args": ["ab", ["a"]], "expected": false},
+    {"name": "Word bank", "args": ["goalspecial", ["go", "goal", "goals", "special"]], "expected": true},
+    {"name": "Longest word", "args": ["aaaaaaaaaaaaaaaaaaaa", ["aaaaaaaaaaaaaaaaaaaa"]], "expected": true},
+    {"name": "Large unreachable", "args": [{"$str": {"n": 299, "chars": ["a"], "seed": 1}}, ["aa", "aaaa", "aaaaaa", "aaaaaaaa", "aaaaaaaaaa", "aaaaaaaaaaaa", "aaaaaaaaaaaaaa", "aaaaaaaaaaaaaaaa", "aaaaaaaaaaaaaaaaaa", "aaaaaaaaaaaaaaaaaaaa"]], "expected": false},
+    {"name": "Large reachable", "args": [{"$str": {"n": 300, "chars": ["a"], "seed": 1}}, ["aaaaaaaaaaaaaaaaaaaa", "aaaaaaaaaaaaaaaaaaa", "aaaaaaa"]], "expected": true}
+  ]
+}

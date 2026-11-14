@@ -106,4 +106,4 @@ The module teaches the topic. The lesson records what the block taught you, from
 | File | What it is |
 |---|---|
 | [diagnostic.md](diagnostic.md) | Seven timed problems, taken once after module 00's self-check. It sets the Start levels in your skills matrix |
-| [templates/](templates/) | The starting versions of every file in `my-prep/`. Claude copies them once, at discovery, and never over files that exist |
+| [templates/](templates/) | The starting versions of every file in `my-prep/`. The app copies them the first time it starts, or Claude does at discovery if you start there. Neither copies over files that exist |

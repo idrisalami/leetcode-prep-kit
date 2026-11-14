@@ -1,0 +1,26 @@
+{
+  "slug": "coin-change",
+  "driver": "function",
+  "class": "Solution",
+  "method": "coinChange",
+  "params": [{"name": "coins", "type": "int[]"}, {"name": "amount", "type": "int"}],
+  "returns": "int",
+  "compare": "exact",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "args": [[1, 2, 5], 11], "expected": 3},
+    {"name": "Example 2", "example": true, "args": [[2], 3], "expected": -1},
+    {"name": "Example 3", "example": true, "args": [[1], 0], "expected": 0},
+    {"name": "Exact single coin", "args": [[5], 5], "expected": 1},
+    {"name": "Coin too large", "args": [[2], 1], "expected": -1},
+    {"name": "Unreachable", "args": [[3, 7], 11], "expected": -1},
+    {"name": "Greedy trap", "args": [[1, 3, 4], 6], "expected": 2},
+    {"name": "Classic hard", "args": [[186, 419, 83, 408], 6249], "expected": 20},
+    {"name": "Huge coin", "args": [[2147483647], 1], "expected": -1},
+    {"name": "Huge coin and one", "args": [[2147483647, 1], 2], "expected": 2},
+    {"name": "Amount hundred", "args": [[1, 2, 5], 100], "expected": 20},
+    {"name": "Zero amount many coins", "args": [[3, 5, 7], 0], "expected": 0},
+    {"name": "Large amount", "args": [[5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43], 9999], "expected": 233},
+    {"name": "Large unreachable", "args": [[2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24], 9999], "expected": -1}
+  ]
+}

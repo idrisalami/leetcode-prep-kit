@@ -1,0 +1,26 @@
+{
+  "slug": "longest-palindromic-substring",
+  "driver": "function",
+  "class": "Solution",
+  "method": "longestPalindrome",
+  "params": [{"name": "s", "type": "str"}],
+  "returns": "str",
+  "compare": "checker:palindrome_substring",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "args": ["babad"], "expected": "bab"},
+    {"name": "Example 2", "example": true, "args": ["cbbd"], "expected": "bb"},
+    {"name": "Single character", "args": ["a"], "expected": "a"},
+    {"name": "Two different", "args": ["ab"], "expected": "a"},
+    {"name": "Two equal", "args": ["aa"], "expected": "aa"},
+    {"name": "All equal", "args": ["aaaa"], "expected": "aaaa"},
+    {"name": "Odd palindrome", "args": ["abcba"], "expected": "abcba"},
+    {"name": "Even palindrome", "args": ["abba"], "expected": "abba"},
+    {"name": "Inside a word", "args": ["forgeeksskeegfor"], "expected": "geeksskeeg"},
+    {"name": "No repeats", "args": ["abcd"], "expected": "a"},
+    {"name": "Digits", "args": ["12321"], "expected": "12321"},
+    {"name": "Mixed case", "args": ["Aa"], "expected": "A"},
+    {"name": "Long run of one letter", "args": [{"$str": {"n": 1000, "chars": ["a"], "seed": 1}}], "expected": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+    {"name": "Large input", "args": [{"$str": {"n": 1000, "chars": ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"], "seed": 3}}], "expected": "sVUxUVs"}
+  ]
+}

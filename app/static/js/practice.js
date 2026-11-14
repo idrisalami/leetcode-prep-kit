@@ -1,0 +1,967 @@
+// The practice workspace at #/practice/<slug>: the problem, the four "Before you code" boxes, the
+// editor with autosave, Run and Submit with their results, and the coach. The pure helpers at the
+// top never touch the DOM, so node can import this file for the unit tests. main.js is loaded
+// lazily inside render() for the same reason (it builds the shell when it is imported).
+import { get, post, put, ApiError } from "./api.js";
+import { h, clear, sanitizeHtml, confirmDialog, difficultyPill, statusMark, toast } from "./ui.js";
+import { renderMarkdown } from "./md.js";
+import { createEditor, keyLabels, isMacPlatform } from "./editor.js";
+import { createCoach } from "./coach.js";
+import { redoQuestion } from "./redo.js";
+
+// ---- pure helpers ---------------------------------------------------------------
+
+const TEX = [
+  [/\\(?:text|textbf|textit|texttt|mathrm|mathbf|mathit|operatorname)\{([^{}]*)\}/g, "$1"],
+  [/\\times(?![a-zA-Z])/g, "×"], [/\\cdot(?![a-zA-Z])/g, "·"],
+  [/\\leq?(?![a-zA-Z])/g, "≤"], [/\\geq?(?![a-zA-Z])/g, "≥"], [/\\neq?(?![a-zA-Z])/g, "≠"],
+  [/\\approx(?![a-zA-Z])/g, "≈"], [/\\pm(?![a-zA-Z])/g, "±"], [/\\infty(?![a-zA-Z])/g, "∞"],
+  [/\\(?:ldots|dots|cdots)(?![a-zA-Z])/g, "…"], [/\\(?:to|rightarrow)(?![a-zA-Z])/g, "→"],
+  [/\\in(?![a-zA-Z])/g, "∈"], [/\\sqrt(?![a-zA-Z])/g, "√"], [/\\sum(?![a-zA-Z])/g, "∑"],
+  [/\\lfloor(?![a-zA-Z])/g, "⌊"], [/\\rfloor(?![a-zA-Z])/g, "⌋"],
+  [/\\lceil(?![a-zA-Z])/g, "⌈"], [/\\rceil(?![a-zA-Z])/g, "⌉"],
+  [/\\([{}%#&$_])/g, "\u0000$1"], // escaped literals survive the brace and underscore passes
+  [/\\[,;!: ]/g, " "],
+  [/\^\{([^{}]*)\}/g, "<sup>$1</sup>"], [/\^(-?\d+|[A-Za-z])/g, "<sup>$1</sup>"],
+  [/_\{([^{}]*)\}/g, "<sub>$1</sub>"], [/_(\d+|[a-z])(?![A-Za-z0-9])/g, "<sub>$1</sub>"],
+  [/\\([a-zA-Z]+)/g, "$1"], // \log, \min, \max and anything unknown: the bare word
+  [/[{}]/g, ""],
+];
+
+function plainMaths(tex) {
+  let s = tex.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  for (const [re, to] of TEX) s = s.replace(re, to);
+  // Left-over * and _ would turn into emphasis in the Markdown around it.
+  s = s.replace(/(^|[^\u0000])([*_])/g, "$1\\$2");
+  return s.replace(/\u0000/g, "");
+}
+
+/**
+ * Tidy a NeetCode statement for the Markdown renderer: inline $…$ maths becomes plain text with
+ * <sup>/<sub> (angle brackets escaped, so the maths can never become HTML), and the trailing
+ * "Company Tags" NeetCode Pro upsell goes. Code spans and fenced blocks are left as they are.
+ */
+export function cleanNeetcode(md) {
+  let s = String(md == null ? "" : md);
+  s = s.replace(/(?:\s*<br\s*\/?>)*\s*<details class="company-tags-accordion">[\s\S]*?<\/details>/g, "");
+  s = s.replace(/(?:\s*<br\s*\/?>)+\s*$/, "");
+  return s.split(/(```[\s\S]*?(?:```|$)|`[^`\n]*`)/).map((part, i) => (i % 2 ? part
+    : part.replace(/\$(?![\s$])([^$\n]+?)(?<!\s)\$/g, (_m, tex) => plainMaths(tex)))).join("");
+}
+
+const pad2 = (n) => String(n).padStart(2, "0");
+
+/** Seconds -> "mm:ss", or "h:mm:ss" from one hour. */
+export function fmtClock(seconds) {
+  let n = Number(seconds);
+  if (!Number.isFinite(n) || n < 0) n = 0;
+  n = Math.floor(n);
+  const hrs = Math.floor(n / 3600);
+  const min = Math.floor((n % 3600) / 60);
+  const sec = n % 60;
+  return hrs ? hrs + ":" + pad2(min) + ":" + pad2(sec) : pad2(min) + ":" + pad2(sec);
+}
+
+/** A case's run time in words: "<1 ms", "3 ms", "1.2 s"; "" when there is none. */
+export function fmtMs(ms) {
+  if (ms === null || ms === undefined || !Number.isFinite(Number(ms))) return "";
+  const n = Number(ms);
+  if (n < 1) return "<1 ms";
+  if (Math.round(n) < 1000) return Math.round(n) + " ms";
+  return (n / 1000).toFixed(1) + " s";
+}
+
+const lineOf = (e) => (e && Number.isInteger(e.line) && e.line > 0 ? e.line : null);
+
+/** "IndexError on line 4: list index out of range" (no line, no " on line"). */
+export function errorText(err) {
+  if (!err) return "";
+  const line = lineOf(err);
+  return (err.type || "Error") + (line ? " on line " + line : "") + (err.message ? ": " + err.message : "");
+}
+
+const withTime = (words, r) => {
+  const t = fmtMs(r.ms);
+  return t ? words + " · " + t : words;
+};
+
+/** One line of the output strip: {icon, tone, name, note, open}. */
+export function caseRow(r) {
+  const name = r.name || "Case";
+  switch (r.status) {
+    case "pass":
+      return { icon: "✓", tone: "pass", name, note: fmtMs(r.ms), open: false };
+    case "fail":
+      return { icon: "✗", tone: "fail", name, note: withTime("wrong answer", r), open: true };
+    case "timeout":
+      return { icon: "⏱", tone: "timeout", name, note: "timed out", open: true };
+    case "not_run":
+      return { icon: "–", tone: "skip", name, note: "not run", open: false };
+    default: {
+      const e = r.error;
+      const line = lineOf(e);
+      const head = ((e && e.type) || "Error") + (line ? " on line " + line : "");
+      return { icon: "✗", tone: "error", name, note: withTime(head, r), open: true };
+    }
+  }
+}
+
+/** The [label, value] pairs a failing case shows when it is expanded. */
+export function caseFields(r) {
+  const rows = [["Input", r.input], ["Expected", r.expected]];
+  if (r.status === "fail") rows.push(["Got", r.got]);
+  if (r.status === "error") {
+    rows.push(["Error", r.error ? errorText(r.error) : r.message || "Error"]);
+    if (r.error && r.error.trace) rows.push(["Traceback", r.error.trace]);
+  }
+  if (r.status === "timeout" && r.message) rows.push(["Note", r.message]);
+  if (r.stdout) rows.push(["Printed output", r.stdout]);
+  return rows.filter(([, v]) => v !== null && v !== undefined);
+}
+
+/** The headline of a run or a submit. Never a LeetCode verdict: these are the app's tests. */
+export function resultSummary(result, kind) {
+  const results = result.results || [];
+  const ran = results.some((r) => r.status && r.status !== "not_run");
+  const total = Number(result.total) || 0;
+  const passed = Number(result.passed) || 0;
+  if ((result.fatal && !ran) || !total) return { tone: "bad", text: "No test ran" };
+  const all = passed === total;
+  if (kind === "submit") {
+    return all ? { tone: "good", text: "All " + total + " of the app's tests pass" }
+      : { tone: "bad", text: passed + " of " + total + " of the app's tests pass" };
+  }
+  if (all) {
+    return { tone: "good", text: total === 1 ? "The example passes" : total === 2 ? "Both examples pass"
+      : "All " + total + " examples pass" };
+  }
+  return { tone: "bad", text: total === 1 ? "The example does not pass" : passed + " of " + total + " examples pass" };
+}
+
+const attemptOf = (s) => s.attempt || 1;
+
+/** Chat turns and this attempt's written reviews, in time order, for the coach pane. */
+export function historyItems(chat, submits, attempt) {
+  const a = attempt || 1;
+  const items = (chat || []).map((c) => Object.assign({ type: "chat" }, c));
+  for (const s of submits || []) {
+    if (attemptOf(s) !== a || !s.reviewed || !s.review) continue;
+    items.push({ type: "review", at: s.at, submitId: s.id, review: s.review, passed: s.passed, total: s.total });
+  }
+  return items.sort((x, y) => (x.at < y.at ? -1 : x.at > y.at ? 1 : 0));
+}
+
+/** The id of this attempt's latest submit when it still has no review, else null. */
+export function unreviewedSubmit(submits, attempt) {
+  const mine = (submits || []).filter((s) => attemptOf(s) === (attempt || 1));
+  const last = mine[mine.length - 1];
+  return last && !last.reviewed ? last.id : null;
+}
+
+const normCode = (s) => String(s == null ? "" : s).replace(/\r\n?/g, "\n").trim();
+
+/** True when the editor holds the starting skeleton (or nothing): there is no solution to run yet. */
+export function isUntouchedSkeleton(code, skeleton) {
+  const c = normCode(code);
+  return c === "" || c === normCode(skeleton);
+}
+
+/**
+ * "Solved before · new attempt" while a Redo'd problem has no passing submit in its new attempt;
+ * null otherwise (the plain solved mark is right then, or the problem is not solved).
+ */
+export function attemptNote(p) {
+  if (!p || p.status !== "solved" || (p.attempt || 1) <= 1) return null;
+  const passed = (p.submits || []).some((s) => (s.attempt || 1) === p.attempt && s.ok);
+  return passed ? null : "Solved before · new attempt";
+}
+
+/** Where the free-text notes tab lives in localStorage. */
+export function scratchKey(slug, attempt) {
+  return "prep:scratch:" + slug + ":" + (attempt || 1);
+}
+
+/** After a save of `sent` came back: what is saved now, and is the editor still ahead of it? */
+export function nextSaveState({ current, sent }) {
+  return { saved: sent, dirty: current !== sent };
+}
+
+const realClock = {
+  schedule: (fn, ms) => setTimeout(fn, ms),
+  cancel: (t) => clearTimeout(t),
+};
+
+/**
+ * The words next to the editor. A failure or a stale tab always wins; a warning from the server
+ * ("the state could not be written") never reads as "Saved".
+ */
+export function saveLabel({ saving, error, dirty, warning, stale }) {
+  if (stale) return "Not saved: changed in another tab";
+  if (error) {
+    return error.status === 413 ? "Not saved: over 200,000 characters"
+      : "Not saved: " + (error.detail || "the server did not answer");
+  }
+  if (saving) return "Saving…";
+  if (warning) return "Not saved: " + warning;
+  return dirty ? "Not saved yet" : "Saved";
+}
+
+const isStaleError = (e) => !!e && e.status === 409 && e.code === "stale";
+
+/**
+ * The draft autosave, without the DOM. One PUT at a time; the editor is never written back to.
+ *   snap()            the text to save now (a JSON string of code and the four boxes)
+ *   saved             the text the server already has
+ *   send(text)        the PUT, a promise; keep(text) the keepalive PUT used on leaving
+ *   onState({saving, error, dirty, warning, stale})  after every change of state
+ *   onStale(err)      once, when the server says another tab changed the problem (409 stale);
+ *                     saving stops until reset(text) is called. stall(err) does the same for a
+ *                     Run or Submit that got the 409.
+ * `warning` is the server's save_error from the last answer.
+ * A failed save is retried once, `retryMs` later, if the text is still unsaved; the error stays
+ * until a save succeeds. hold() stops all saving (Reset and Redo call it before their POST) and
+ * resolves once no save is in flight; edits while held are ignored, release() looks again.
+ */
+export function createSaver({ snap, saved, send, keep, onState = () => {}, onStale = () => {},
+  clock = realClock, delay = 1000, retryMs = 5000 }) {
+  let timer = null;
+  let retryTimer = null;
+  let inflight = null; // {text, promise}
+  let error = null;
+  let retried = false;
+  let held = false;
+  let dead = false;
+  let lastFlush = null;
+  let warning = null;
+  let stalled = false;
+  let heldText = null; // the text when the hold began
+  let leaveText = null; // the text when the page was left during a hold
+  const stopTimers = () => {
+    if (timer !== null) { clock.cancel(timer); timer = null; }
+    if (retryTimer !== null) { clock.cancel(retryTimer); retryTimer = null; }
+  };
+  const report = () => {
+    if (!dead) onState({ saving: !!inflight, error, dirty: snap() !== saved, warning, stale: stalled });
+  };
+  const stall = (err) => {
+    if (stalled || dead) return;
+    stalled = true;
+    stopTimers();
+    onStale(err);
+    report();
+  };
+
+  function changed() {
+    if (dead || held || stalled) return;
+    stopTimers();
+    retried = false;
+    timer = clock.schedule(save, delay);
+    report();
+  }
+
+  function save() {
+    stopTimers();
+    if (dead || held || stalled) return inflight ? inflight.promise : null;
+    if (inflight) return inflight.promise;
+    const text = snap();
+    if (text === saved) { error = null; report(); return null; }
+    const mine = { text };
+    mine.promise = Promise.resolve().then(() => send(text)).then((res) => {
+      saved = text;
+      error = null;
+      warning = (res && res.save_error) || null;
+      retried = false;
+      return nextSaveState({ current: dead ? text : snap(), sent: text }).dirty;
+    }, (err) => {
+      if (isStaleError(err)) { stall(err); return false; }
+      error = err || new Error("save failed");
+      if (!retried && !held && !dead && !stalled) {
+        retried = true;
+        retryTimer = clock.schedule(() => { retryTimer = null; if (snap() !== saved) save(); }, retryMs);
+      }
+      return false;
+    }).then((dirty) => {
+      if (inflight === mine) inflight = null;
+      report();
+      if (dirty) changed();
+    });
+    inflight = mine;
+    report();
+    return mine.promise;
+  }
+
+  /** Leaving the page: send what is not saved yet, unless that exact text is already on its way. */
+  function flush() {
+    stopTimers();
+    if (held || dead || stalled) return; // a Reset or Redo owns the draft until its answer is applied
+    const text = snap();
+    if (text === saved || text === lastFlush) return;
+    if (inflight && inflight.text === text) return;
+    lastFlush = text;
+    Promise.resolve().then(() => keep(text)).then((res) => {
+      // The page did not go away (a cancelled unload, the back-forward cache): the server has
+      // this text now, so the label must not keep saying "Not saved yet".
+      if (dead || inflight || held || stalled) return;
+      saved = text;
+      warning = (res && res.save_error) || null;
+      report();
+    }).catch(() => {});
+  }
+
+  async function hold() {
+    held = true;
+    heldText = snap();
+    stopTimers();
+    if (inflight) await inflight.promise;
+  }
+
+  function release() {
+    held = false;
+    if (dead) {
+      // The page was left during the hold. Text typed since the hold began goes out now, once.
+      const text = leaveText;
+      leaveText = null;
+      if (text !== null && text !== heldText && text !== saved) {
+        Promise.resolve().then(() => keep(text)).catch(() => {});
+      }
+      return;
+    }
+    if (snap() !== saved) changed(); else report();
+  }
+
+  /** A newer copy was loaded in place: what the server has is now `text`; saving may go on. */
+  function reset(text) {
+    saved = text;
+    stalled = false;
+    error = null;
+    warning = null;
+    lastFlush = null;
+    report();
+  }
+
+  return {
+    changed, save, flush, hold, release, stall, reset,
+    /** The server's save_error from a Reset, a Redo or the heartbeat. */
+    setWarning(text) { warning = text || null; report(); },
+    get stalled() { return stalled; },
+    get saved() { return saved; },
+    set saved(text) { saved = text; },
+    get busy() { return !!inflight; },
+    destroy() {
+      if (held && !dead) leaveText = snap();
+      dead = true;
+      stopTimers();
+    },
+  };
+}
+
+// ---- the page -----------------------------------------------------------------------
+
+const COACH_KEY = "prep:coachHidden";
+const SAVE_MS = 1000;
+const STALE_TEXT = "This problem changed in another tab. Reload to see the newer code.";
+const MAX_BEAT = 30; // longest stretch the leave-page heartbeat and a submit may carry
+const KEEPALIVE_MAX = 60000; // browsers refuse keepalive bodies over 64 KB
+const BOXES = [
+  ["pattern", "Pattern and signal", "Which pattern, and what in the statement points to it?"],
+  ["complexity", "Complexity and why", "Time and space, and the reason for each."],
+  ["tests", "Edge cases to test", "Inputs that could break it: empty, one item, duplicates…"],
+  ["trace", "Hand trace on the smallest input", "Walk the smallest example through your plan, step by step."],
+];
+
+// Saves still in flight per problem (a flush on leaving). Opening the same problem again waits
+// for them, so it never loads the text from before the last keystrokes.
+const pendingSaves = new Map();
+
+const lsGet = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+const lsSet = (k, v) => {
+  try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { /* private mode */ }
+};
+
+function track(slug, promise) {
+  const p = promise.catch(() => {}).finally(() => { if (pendingSaves.get(slug) === p) pendingSaves.delete(slug); });
+  pendingSaves.set(slug, p);
+  return promise;
+}
+
+export async function render(container, params) {
+  const { slug, isStale } = params;
+  document.title = "Practice · LeetCode Prep";
+  container.classList.add("pr-page");
+  container.append(h("p", { class: "pr-loading", role: "status" }, "Loading the problem…"));
+  const shell = await import("./main.js");
+  if (isStale()) return null;
+  let view = null;
+  let gone = false;
+  const stale = () => gone || isStale();
+
+  async function load() {
+    if (pendingSaves.has(slug)) await pendingSaves.get(slug);
+    if (stale()) return;
+    let p;
+    let setup = null;
+    try {
+      [p, setup] = await Promise.all([get("/problem/" + encodeURIComponent(slug)),
+        get("/setup/status").catch(() => null)]);
+    } catch (e) {
+      if (stale()) return;
+      clear(container);
+      container.append(failPage(e, slug));
+      return;
+    }
+    if (stale()) return;
+    clear(container);
+    view = build(container, p, { setup, shell, stale, reload: async () => {
+      if (view) view.destroy({ save: false });
+      view = null;
+      clear(container);
+      container.append(h("p", { class: "pr-loading", role: "status" }, "Loading the problem…"));
+      await load();
+    } });
+  }
+  await load();
+  if (isStale()) return null;
+  return () => {
+    gone = true;
+    if (view) view.destroy({ save: true });
+    view = null;
+  };
+}
+
+function failPage(e, slug) {
+  const missing = e instanceof ApiError && e.status === 404;
+  document.title = (missing ? "Problem not found" : "Something went wrong") + " · LeetCode Prep";
+  return h("div", { class: "pr-fail" },
+    h("h1", null, missing ? "Problem not found" : "The problem could not be loaded"),
+    h("p", null, missing ? "There is no problem called “" + slug + "” in the app."
+      : (e && e.detail) || (e && e.message) || "The server did not answer."),
+    h("p", { class: "pr-fail-actions" },
+      h("a", { class: "btn", href: "#/" }, "← Home"),
+      h("a", { class: "btn", href: "#/practice" }, "All problems"),
+      missing ? null : h("button", { class: "btn btn-primary", type: "button", onclick: () => location.reload() }, "Retry")));
+}
+
+/** Build the workspace for problem `p` inside `root`. Returns {destroy({save})}. */
+function build(root, p, { setup, shell, stale, reload }) {
+  const slug = p.slug;
+  const path = "/problem/" + encodeURIComponent(slug);
+  const mac = isMacPlatform(navigator);
+  const keys = keyLabels(mac);
+  const cleanups = [];
+  const listen = (target, ev, fn, opts) => {
+    target.addEventListener(ev, fn, opts);
+    cleanups.push(() => target.removeEventListener(ev, fn, opts));
+  };
+  let dead = false;
+  const isDead = () => dead || stale();
+  document.title = p.title + " · Practice · LeetCode Prep";
+
+  // ---- top bar ----
+  let seconds = Number(p.seconds) || 0;
+  const clock = h("span", { class: "pr-clock" }, fmtClock(seconds));
+  const timer = h("span", { class: "pr-timer", title: "Active time on this problem, all attempts" },
+    h("span", { class: "sr-only" }, "Time on this problem: "), clock);
+  const statusBox = h("span", { class: "pr-status" });
+  const drawStatus = () => {
+    clear(statusBox);
+    const note = attemptNote(p);
+    if (note) statusBox.append(h("span", { class: "status status-solved" },
+      h("span", { class: "status-icon", "aria-hidden": "true" }, "✓"), " " + note));
+    else if (p.status === "solved") statusBox.append(statusMark("solved"));
+    else if (p.status === "attempted") statusBox.append(statusMark("attempted"));
+  };
+  drawStatus();
+  const toggle = h("button", { class: "btn btn-sm pr-coach-toggle", type: "button", "aria-controls": "pr-coach" });
+  const meta = h("span", { class: "pr-meta" },
+    "Module " + p.module + (p.module_title ? " · " + p.module_title : "") + " · ", difficultyPill(p.difficulty));
+  const top = h("header", { class: "pr-top" },
+    h("a", { class: "btn btn-quiet btn-sm pr-home", href: "#/" }, "← Home"),
+    h("h1", { class: "pr-title" }, (p.number ? p.number + ". " : "") + p.title),
+    meta, statusBox, h("span", { class: "pr-spacer" }), timer, toggle);
+
+  // ---- problem pane ----
+  const noteBoxes = {};
+  const boxes = BOXES.map(([key, label, hint]) => {
+    const id = "pr-note-" + key;
+    const ta = h("textarea", { class: "pr-box-input", id, rows: "2", placeholder: hint, spellcheck: "true" });
+    ta.value = (p.notes && p.notes[key]) || "";
+    noteBoxes[key] = ta;
+    return h("div", { class: "pr-box" }, h("label", { for: id }, label), ta);
+  });
+  const notesNow = () => {
+    const n = {};
+    for (const [key] of BOXES) n[key] = noteBoxes[key].value;
+    return n;
+  };
+  const problem = h("section", { class: "pr-pane pr-problem", "aria-label": "Problem" },
+    statementBlock(p),
+    examplesBlock(p),
+    h("div", { class: "pr-before" },
+      h("h2", { class: "pr-h" }, "Before you code"),
+      h("p", { class: "pr-sub" }, "Saved with your draft. The coach and the final review read them."),
+      boxes));
+
+  // ---- editor and tabs ----
+  const editorHost = h("div", { class: "pr-editor", id: "pr-panel-code", role: "tabpanel",
+    "aria-labelledby": "pr-tab-code" });
+  const scratch = h("textarea", { class: "pr-scratch", "aria-label": "Free notes",
+    placeholder: "Anything else: ideas, a plan, things to look up." });
+  const sKey = scratchKey(slug, p.attempt);
+  scratch.value = lsGet(sKey) || "";
+  const scratchPanel = h("div", { class: "pr-scratch-panel", id: "pr-panel-notes", role: "tabpanel",
+    "aria-labelledby": "pr-tab-notes", hidden: true },
+  h("p", { class: "pr-sub" }, "These notes stay in this browser only. The coach reads the four boxes on the left, not this."),
+  scratch);
+  const tabCode = h("button", { class: "pr-tab", id: "pr-tab-code", role: "tab", type: "button",
+    "aria-selected": "true", "aria-controls": "pr-panel-code" }, "solution.py");
+  const tabNotes = h("button", { class: "pr-tab", id: "pr-tab-notes", role: "tab", type: "button",
+    "aria-selected": "false", "aria-controls": "pr-panel-notes", tabindex: "-1" }, "notes");
+  const saveState = h("span", { class: "pr-save" }, "Saved");
+  const tabs = h("div", { class: "pr-tabs" },
+    h("div", { role: "tablist", "aria-label": "Files", class: "pr-tablist" }, tabCode, tabNotes), saveState);
+
+  const runBtn = h("button", { class: "btn btn-primary pr-run", type: "button",
+    title: "Run the examples (" + keys.run + ")" }, "▶ Run examples");
+  const submitBtn = h("button", { class: "btn pr-submit", type: "button" }, "Submit for final review");
+  const resetBtn = h("button", { class: "btn btn-quiet btn-sm", type: "button" }, "Reset to skeleton");
+  const redoBtn = h("button", { class: "btn btn-quiet btn-sm", type: "button", hidden: p.status !== "solved" },
+    "Redo from scratch");
+  const actions = h("div", { class: "pr-actions" }, runBtn, submitBtn,
+    h("span", { class: "pr-keys" }, keys.run + " runs · " + keys.save + " saves · " + keys.comment
+      + " comments · Esc then Tab leaves the editor"),
+    h("span", { class: "pr-spacer" }), resetBtn, redoBtn);
+  const outLive = h("div", { class: "sr-only", role: "status", "aria-live": "polite" });
+  const out = h("div", { class: "pr-out", tabindex: "0", "aria-label": "Results" },
+    h("p", { class: "pr-out-empty" }, "Run the examples to see each case here."));
+  // Shown when the server says another tab changed this problem (409 stale). It stays until the
+  // newer copy is loaded: nothing is saved or run from here before that.
+  const staleReload = h("button", { class: "btn btn-sm", type: "button" }, "Reload");
+  const staleNote = h("div", { class: "notice notice-warn pr-stale", role: "alert", hidden: true },
+    h("p", null, STALE_TEXT), staleReload);
+  const work = h("section", { class: "pr-pane pr-work", "aria-label": "Code" },
+    staleNote, tabs, editorHost, scratchPanel, actions, out, outLive);
+
+  // ---- coach ----
+  const pendingId = unreviewedSubmit(p.submits, p.attempt);
+  const pendingRec = pendingId ? (p.submits || []).find((x) => x.id === pendingId) : null;
+  const coach = createCoach({
+    slug, isStale: isDead,
+    context: () => ({ code: editor.getValue(), notes: notesNow() }),
+    claude: setup ? setup.claude !== false : true,
+    history: historyItems(p.chat, p.submits, p.attempt),
+    pendingSubmit: pendingId,
+    reviewing: !!(pendingRec && pendingRec.review_in_progress),
+    onOpen: () => setCoach(true),
+  });
+
+  const grid = h("div", { class: "pr-grid" }, problem, work, coach.el);
+  root.append(top, grid);
+
+  // ---- editor ----
+  const editor = createEditor(editorHost, {
+    value: p.code ?? p.skeleton ?? "",
+    label: "solution.py, Python code editor",
+    onChange: () => changed(),
+    onRun: () => runCode("run"),
+    onSave: () => saveNow(),
+  });
+
+  // ---- coach toggle ----
+  function setCoach(show, remember = true) {
+    grid.classList.toggle("pr-no-coach", !show);
+    coach.el.hidden = !show;
+    toggle.textContent = show ? "Hide coach ⟩" : "⟨ Show coach";
+    toggle.setAttribute("aria-expanded", String(show));
+    if (remember) lsSet(COACH_KEY, show ? null : "1");
+    editor.refresh();
+  }
+  setCoach(lsGet(COACH_KEY) !== "1", false);
+  toggle.addEventListener("click", () => {
+    const show = coach.el.hidden;
+    setCoach(show);
+    if (show) coach.focusInput();
+  });
+
+  // ---- tabs ----
+  const showTab = (which) => {
+    const code = which === "code";
+    tabCode.setAttribute("aria-selected", String(code));
+    tabNotes.setAttribute("aria-selected", String(!code));
+    tabCode.tabIndex = code ? 0 : -1;
+    tabNotes.tabIndex = code ? -1 : 0;
+    editorHost.hidden = !code;
+    scratchPanel.hidden = code;
+    if (code) editor.refresh();
+  };
+  tabCode.addEventListener("click", () => showTab("code"));
+  tabNotes.addEventListener("click", () => showTab("notes"));
+  for (const t of [tabCode, tabNotes]) {
+    t.addEventListener("keydown", (e) => {
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      e.preventDefault();
+      const next = t === tabCode ? tabNotes : tabCode;
+      showTab(next === tabCode ? "code" : "notes");
+      next.focus();
+    });
+  }
+  let scratchTimer = null;
+  let scratchDropped = false; // Redo cleared the key: nothing may write the old notes back
+  const saveScratch = () => {
+    clearTimeout(scratchTimer);
+    scratchTimer = null;
+    if (!scratchDropped) lsSet(sKey, scratch.value || null);
+  };
+  scratch.addEventListener("input", () => { clearTimeout(scratchTimer); scratchTimer = setTimeout(saveScratch, 300); });
+
+  // ---- autosave ----
+  // createSaver (above) does the timing; this part only shows its state.
+  const snap = () => JSON.stringify({ code: editor.getValue(), notes: notesNow() });
+  const fromServer = (n) => {
+    const out = {};
+    for (const [key] of BOXES) out[key] = (n && n[key]) || "";
+    return out;
+  };
+  // The problem's version number: sent with every save, run and submit, so the server can tell
+  // that another tab changed the problem since this page loaded it.
+  let rev = Number.isInteger(p.rev) ? p.rev : null;
+  const withRev = (body) => (rev === null ? body : Object.assign({}, body, { base_rev: rev }));
+  const noteRev = (res) => { if (res && Number.isInteger(res.rev)) rev = res.rev; return res; };
+  const saver = createSaver({
+    snap,
+    saved: JSON.stringify({ code: p.code ?? p.skeleton ?? "", notes: fromServer(p.notes) }),
+    send: (text) => track(slug, put(path + "/draft", withRev(JSON.parse(text)))).then(noteRev),
+    keep: (text) => track(slug, put(path + "/draft", withRev(JSON.parse(text)),
+      { keepalive: text.length < KEEPALIVE_MAX })).then(noteRev),
+    delay: SAVE_MS,
+    onStale: () => { staleNote.hidden = false; },
+    onState: (st) => {
+      // A failure stays on screen through the retry, until a save goes through.
+      saveState.textContent = saveLabel(st);
+      saveState.classList.toggle("pr-save-bad", !!st.error || !!st.warning || !!st.stale);
+    },
+  });
+  listen(window, "prep:save-state", (e) => saver.setWarning(e.detail && e.detail.warning));
+  const changed = () => { if (!dead) saver.changed(); };
+  const saveNow = () => { saver.save(); };
+  const flush = () => saver.flush();
+  for (const ta of Object.values(noteBoxes)) ta.addEventListener("input", changed);
+  listen(window, "pagehide", () => { flush(); saveScratch(); });
+  listen(window, "beforeunload", () => { flush(); saveScratch(); });
+
+  // ---- time ----
+  // `sinceBeat` is the active time the 30 s heartbeat has not carried yet. Leaving the page sends
+  // it (at most 30 s), and a submit sends it as `elapsed`, so a short visit is not lost.
+  let sinceBeat = 0;
+  const tick = setInterval(() => {
+    if (!shell.isActive()) return;
+    seconds += 1;
+    sinceBeat += 1;
+    clock.textContent = fmtClock(seconds);
+  }, 1000);
+  cleanups.push(() => clearInterval(tick));
+  listen(window, "prep:heartbeat", (e) => {
+    if (e.detail && e.detail.slug === slug) sinceBeat = 0;
+  });
+  // Taking the seconds also tells the shell, so its next beat does not credit them again.
+  const takeElapsed = () => {
+    const n = Math.min(MAX_BEAT, Math.floor(sinceBeat));
+    sinceBeat = 0;
+    shell.tookSeconds(n);
+    return n;
+  };
+  // A submit that failed credited nothing: the seconds go back to both counters.
+  const giveBack = (n) => {
+    if (!(n >= 1)) return;
+    sinceBeat += n;
+    shell.tookSeconds(-n);
+  };
+  const sendRest = () => {
+    const n = takeElapsed();
+    if (n >= 1) post("/heartbeat", { slug, seconds: n }, { keepalive: true }).catch(() => {});
+  };
+  listen(window, "pagehide", sendRest);
+
+  // ---- a newer copy from another tab ----
+  // Put the server's copy of the problem into this page, in place: code, the four boxes, status.
+  function applyFresh(fresh) {
+    if (isDead()) return;
+    if ((fresh.attempt || 1) !== (p.attempt || 1)) { reload(); return; }
+    const code = fresh.code ?? fresh.skeleton ?? "";
+    editor.setValue(code);
+    for (const [key] of BOXES) noteBoxes[key].value = (fresh.notes && fresh.notes[key]) || "";
+    saver.reset(JSON.stringify({ code, notes: fromServer(fresh.notes) }));
+    noteRev(fresh);
+    if (fresh.status !== p.status) {
+      p.status = fresh.status;
+      p.submits = fresh.submits || p.submits;
+      drawStatus();
+      redoBtn.hidden = fresh.status !== "solved";
+    }
+    staleNote.hidden = true;
+    clear(out);
+    out.append(h("p", { class: "pr-out-empty" }, "Run the examples to see each case here."));
+  }
+  staleReload.addEventListener("click", async () => {
+    staleReload.disabled = true;
+    try {
+      const fresh = await get(path);
+      if (!isDead()) applyFresh(fresh);
+    } catch (e) {
+      if (!isDead()) toast("The problem could not be reloaded: " + (e.detail || e.message), { kind: "error" });
+    } finally {
+      staleReload.disabled = false;
+    }
+  });
+  // Coming back to the tab: if another tab changed the problem and nothing here is unsaved,
+  // take the newer copy quietly. Unsaved work is never overwritten; the server's 409 guards it.
+  listen(document, "visibilitychange", async () => {
+    if (document.visibilityState !== "visible" || isDead() || running || saver.busy || saver.stalled) return;
+    if (snap() !== saver.saved) return;
+    let fresh;
+    try { fresh = await get(path); } catch (e) { return; }
+    if (isDead() || running || saver.busy || saver.stalled || snap() !== saver.saved) return;
+    if (Number.isInteger(fresh.rev) && fresh.rev !== rev) applyFresh(fresh);
+  });
+
+  // ---- run and submit ----
+  let running = null;
+  let runCtrl = null;
+  const syncButtons = () => {
+    runBtn.disabled = submitBtn.disabled = resetBtn.disabled = redoBtn.disabled = running !== null;
+  };
+  async function runCode(kind) {
+    if (running || dead) return;
+    if (isUntouchedSkeleton(editor.getValue(), p.skeleton)) {
+      clear(out);
+      out.append(h("p", { class: "notice notice-warn", role: "alert" }, "Write your solution first."));
+      outLive.textContent = "Write your solution first.";
+      editor.clearError();
+      editor.focus();
+      return;
+    }
+    running = kind;
+    syncButtons();
+    runCtrl = new AbortController();
+    const mine = runCtrl;
+    clear(out);
+    out.append(h("p", { class: "pr-out-wait" }, kind === "run" ? "Running the examples…" : "Running the app's tests…"));
+    outLive.textContent = kind === "run" ? "Running the examples." : "Running the app's tests.";
+    const code = editor.getValue();
+    const body = withRev(kind === "run" ? { code } : { code, notes: notesNow(), elapsed: takeElapsed() });
+    let res = null;
+    let failure = null;
+    try {
+      res = await post(path + (kind === "run" ? "/run" : "/submit"), body, { signal: mine.signal });
+    } catch (e) {
+      failure = e;
+    }
+    if (runCtrl === mine) runCtrl = null;
+    if (isDead() || mine.signal.aborted) return;
+    running = null;
+    syncButtons();
+    clear(out);
+    if (failure) {
+      giveBack(body.elapsed);
+      editor.clearError();
+      if (failure instanceof ApiError && failure.status === 409 && failure.code === "stale") saver.stall(failure);
+      const text = failure instanceof ApiError && failure.status === 413
+        ? "The code is over 200,000 characters, so it was not run."
+        : (failure.detail || failure.message || "The run failed.");
+      out.append(h("p", { class: "notice notice-warn", role: "alert" }, text));
+      outLive.textContent = "";
+      return;
+    }
+    noteRev(res);
+    saver.setWarning(res.save_error);
+    drawResult(res, kind);
+    if (kind === "submit") afterSubmit(res);
+  }
+
+  function drawResult(res, kind) {
+    const sum = resultSummary(res, kind);
+    const solved = kind === "submit" && res.solved;
+    out.append(h("div", { class: "pr-sum pr-sum-" + sum.tone + (solved ? " pr-solved" : "") },
+      h("span", { class: "pr-sum-icon", "aria-hidden": "true" }, sum.tone === "good" ? "✓" : "✗"),
+      h("strong", null, sum.text),
+      solved && res.first_try ? h("span", { class: "pr-sum-note" }, "First try.") : null,
+      kind === "submit" ? h("span", { class: "pr-sum-note" },
+        setup && setup.claude === false ? "The final review needs the claude tool; see the coach pane."
+          : "The final review is in the coach pane.") : null));
+    outLive.textContent = sum.text + ".";
+    let markLine = null;
+    if (res.fatal) {
+      out.append(h("div", { class: "pr-fatal", role: "alert" },
+        h("strong", null, errorText(res.fatal)),
+        res.fatal.type === "SyntaxError" ? h("p", null, "Nothing ran. Fix the line and run again.") : null));
+      markLine = lineOf(res.fatal);
+    }
+    const rows = h("ul", { class: "pr-cases" });
+    let opened = false;
+    for (const r of res.results || []) {
+      const row = caseRow(r);
+      const head = [h("span", { class: "pr-case-icon", "aria-hidden": "true" }, row.icon),
+        h("span", { class: "pr-case-name" }, row.name),
+        h("span", { class: "pr-case-note" }, row.note)];
+      const sr = h("span", { class: "sr-only" }, row.tone === "pass" ? "passes: " : row.tone === "skip" ? "" : "fails: ");
+      if (row.open) {
+        const det = h("details", { class: "pr-case-box" },
+          h("summary", { class: "pr-case pr-case-" + row.tone }, sr, ...head),
+          h("dl", { class: "pr-fields" }, caseFields(r).map(([k, v]) => [h("dt", null, k),
+            h("dd", null, h("pre", null, String(v)))])));
+        // Only the first failing case starts open; a full submit can fail many at once.
+        if (!opened) { det.open = true; opened = true; }
+        rows.append(h("li", null, det));
+      } else {
+        rows.append(h("li", { class: "pr-case pr-case-" + row.tone }, sr, ...head));
+      }
+      if (markLine === null && r.status === "error") markLine = lineOf(r.error);
+    }
+    if ((res.results || []).length) out.append(rows);
+    if (markLine !== null && editor.markError(markLine)) {
+      out.append(h("p", { class: "pr-sub" }, "Line " + markLine + " is marked in the editor."));
+    } else {
+      editor.clearError();
+    }
+    out.scrollTop = 0;
+  }
+
+  function afterSubmit(res) {
+    p.submits = (p.submits || []).concat([{ id: res.submit_id, attempt: p.attempt || 1, ok: !!res.solved }]);
+    if (res.solved) {
+      redoBtn.hidden = false;
+      p.status = "solved";
+    } else if (p.status === "new") {
+      p.status = "attempted";
+    }
+    drawStatus();
+    shell.refreshNav();
+    setCoach(true);
+    coach.review(res.submit_id);
+  }
+
+  runBtn.addEventListener("click", () => runCode("run"));
+  submitBtn.addEventListener("click", () => runCode("submit"));
+
+  // In a tab that is behind another tab, Reset and Redo would act on the other tab's code and
+  // drop what is typed here, so they wait for the Reload.
+  const behind = () => {
+    if (!saver.stalled) return false;
+    toast("This problem changed in another tab. Reload first.", { kind: "error" });
+    return true;
+  };
+
+  resetBtn.addEventListener("click", async () => {
+    if (running || behind()) return;
+    const kept = !isUntouchedSkeleton(editor.getValue(), p.skeleton);
+    const ok = await confirmDialog("Replace your code with the starting skeleton? The four boxes keep their text."
+      + (kept ? " Your current code is kept as " + slug + ".prev.py." : ""),
+    { confirm: "Reset the code", focus: "cancel" });
+    if (!ok || isDead() || running) return;
+    running = "reset";
+    syncButtons();
+    await saver.save(); // the last keystrokes reach the server before it moves the code aside
+    // No autosave may land during the POST and write the old code over the skeleton.
+    await saver.hold();
+    if (isDead()) { saver.release(); return; }
+    try {
+      const res = await post(path + "/reset", {});
+      noteRev(res);
+      if (isDead()) return;
+      saver.setWarning(res.save_error);
+      editor.setValue(res.code);
+      const s = JSON.parse(saver.saved);
+      s.code = res.code;
+      saver.saved = JSON.stringify(s);
+      clear(out);
+      out.append(h("p", { class: "pr-out-empty" }, "The code is back to the skeleton."));
+    } catch (e) {
+      if (!isDead()) toast("The code could not be reset: " + (e.detail || e.message), { kind: "error" });
+    } finally {
+      saver.release(); // after a page change this sends text typed during the hold, once
+      if (!isDead()) { running = null; syncButtons(); }
+    }
+  });
+
+  redoBtn.addEventListener("click", async () => {
+    if (running || behind()) return;
+    const ok = await confirmDialog(redoQuestion("this problem"), { confirm: "Start again", focus: "cancel" });
+    if (!ok || isDead() || running) return;
+    running = "redo";
+    syncButtons();
+    await saver.hold();
+    if (isDead()) return;
+    try {
+      await post(path + "/redo", {});
+      if (isDead()) return;
+      scratchDropped = true;
+      lsSet(sKey, null);
+      await reload();
+    } catch (e) {
+      if (isDead()) return;
+      saver.release();
+      running = null;
+      syncButtons();
+      toast("The problem could not be restarted: " + (e.detail || e.message), { kind: "error" });
+    }
+  });
+
+  // Cmd/Ctrl-S anywhere on the page saves; Cmd/Ctrl-Enter outside the coach runs the examples.
+  // The editor handles both itself and marks the event as handled.
+  listen(window, "keydown", (e) => {
+    if (e.defaultPrevented || !(mac ? e.metaKey : e.ctrlKey) || e.altKey) return;
+    if (e.key === "s" || e.key === "S") {
+      e.preventDefault();
+      saveNow();
+    } else if (e.key === "Enter" && !coach.el.contains(e.target)) {
+      e.preventDefault();
+      runCode("run");
+    }
+  });
+
+  return {
+    destroy({ save: keep = true } = {}) {
+      if (keep) flush();
+      saveScratch();
+      sendRest();
+      dead = true;
+      saver.destroy();
+      if (runCtrl) runCtrl.abort();
+      coach.destroy();
+      for (const c of cleanups) c();
+      editor.destroy();
+    },
+  };
+}
+
+function statementBlock(p) {
+  const link = h("a", { class: "pr-out-link", href: p.url, target: "_blank", rel: "noopener noreferrer" },
+    "Open on LeetCode ↗");
+  const st = p.statement;
+  if (st && st.body) {
+    let body;
+    if (st.format === "html") {
+      body = h("div", { class: "md pr-stmt" }, sanitizeHtml(st.body));
+    } else {
+      body = renderMarkdown(cleanNeetcode(st.body));
+      body.classList.add("pr-stmt");
+    }
+    return h("div", { class: "pr-statement" }, body, h("p", { class: "pr-linkline" }, link));
+  }
+  return h("div", { class: "pr-statement" },
+    h("div", { class: "notice pr-nostmt" },
+      h("p", null, "The statement is not downloaded yet. Read it on LeetCode; the examples below are the ones Run checks."),
+      h("p", null, link),
+      h("p", { class: "pr-sub" }, "To see statements here, use “Download problem statements” under "
+        + "Finish setting up on ", h("a", { href: "#/" }, "Home"), ".")));
+}
+
+function examplesBlock(p) {
+  const ex = p.examples || [];
+  return h("div", { class: "pr-examples" },
+    h("h2", { class: "pr-h" }, "Examples"),
+    h("p", { class: "pr-sub" }, "These are what “Run examples” checks."),
+    ex.length ? ex.map((e) => h("div", { class: "pr-example" },
+      h("div", { class: "pr-example-name" }, e.name || "Example"),
+      h("pre", { class: "pr-example-io" }, "Input:    " + e.input + "\nExpected: " + e.expected)))
+      : h("p", { class: "pr-sub" }, "This problem has no examples in the app."));
+}

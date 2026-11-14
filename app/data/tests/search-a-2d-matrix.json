@@ -1,0 +1,26 @@
+{
+  "slug": "search-a-2d-matrix",
+  "driver": "function",
+  "class": "Solution",
+  "method": "searchMatrix",
+  "params": [{"name": "matrix", "type": "int[][]"}, {"name": "target", "type": "int"}],
+  "returns": "bool",
+  "compare": "exact",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "args": [[[1, 3, 5, 7], [10, 11, 16, 20], [23, 30, 34, 60]], 3], "expected": true},
+    {"name": "Example 2", "example": true, "args": [[[1, 3, 5, 7], [10, 11, 16, 20], [23, 30, 34, 60]], 13], "expected": false},
+    {"name": "Single cell found", "args": [[[1]], 1], "expected": true},
+    {"name": "Single cell missing", "args": [[[1]], 2], "expected": false},
+    {"name": "Single row", "args": [[[1, 3, 5]], 3], "expected": true},
+    {"name": "Single column", "args": [[[1], [3], [5]], 5], "expected": true},
+    {"name": "Single column missing", "args": [[[1], [3], [5]], 4], "expected": false},
+    {"name": "Below all values", "args": [[[2, 4], [6, 8]], 1], "expected": false},
+    {"name": "Above all values", "args": [[[2, 4], [6, 8]], 9], "expected": false},
+    {"name": "First cell of a row", "args": [[[1, 3], [5, 7]], 5], "expected": true},
+    {"name": "Last cell of a row", "args": [[[1, 3], [5, 7]], 3], "expected": true},
+    {"name": "Between two rows", "args": [[[1, 3], [5, 7]], 4], "expected": false},
+    {"name": "Wide matrix", "args": [[[1, 2, 3, 4], [5, 6, 7, 8]], 6], "expected": true},
+    {"name": "Tall matrix", "args": [[[1, 2], [3, 4], [5, 6], [7, 8]], 7], "expected": true}
+  ]
+}

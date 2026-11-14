@@ -1,0 +1,25 @@
+{
+  "slug": "two-sum-ii-input-array-is-sorted",
+  "driver": "function",
+  "class": "Solution",
+  "method": "twoSum",
+  "params": [{"name": "numbers", "type": "int[]"}, {"name": "target", "type": "int"}],
+  "returns": "int[]",
+  "compare": "exact",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "args": [[2, 7, 11, 15], 9], "expected": [1, 2]},
+    {"name": "Example 2", "example": true, "args": [[2, 3, 4], 6], "expected": [1, 3]},
+    {"name": "Example 3", "example": true, "args": [[-1, 0], -1], "expected": [1, 2]},
+    {"name": "Smallest input", "args": [[1, 2], 3], "expected": [1, 2]},
+    {"name": "Negatives", "args": [[-3, -1, 0, 5], 2], "expected": [1, 4]},
+    {"name": "Equal pair", "args": [[1, 3, 3, 9], 6], "expected": [2, 3]},
+    {"name": "Zeros", "args": [[0, 0, 3, 4], 0], "expected": [1, 2]},
+    {"name": "Opposite extremes", "args": [[-1000, -5, 1000], 0], "expected": [1, 3]},
+    {"name": "Pair at the end", "args": [[1, 2, 3, 4, 100, 200], 300], "expected": [5, 6]},
+    {"name": "Pair at the start", "args": [[1, 2, 30, 40, 50], 3], "expected": [1, 2]},
+    {"name": "Pair in the middle", "args": [[-10, 1, 4, 7, 20, 30], 11], "expected": [3, 4]},
+    {"name": "Negative target", "args": [[-8, -7, 1, 4], -15], "expected": [1, 2]},
+    {"name": "Whole value range", "args": [{"$range": [-1000, 1001, 1]}, 1999], "expected": [2000, 2001]}
+  ]
+}

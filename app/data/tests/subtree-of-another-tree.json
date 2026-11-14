@@ -1,0 +1,26 @@
+{
+  "slug": "subtree-of-another-tree",
+  "driver": "function",
+  "class": "Solution",
+  "method": "isSubtree",
+  "params": [{"name": "root", "type": "TreeNode"}, {"name": "subRoot", "type": "TreeNode"}],
+  "returns": "bool",
+  "compare": "exact",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "args": [[3, 4, 5, 1, 2], [4, 1, 2]], "expected": true},
+    {"name": "Example 2", "example": true, "args": [[3, 4, 5, 1, 2, null, null, null, null, 0], [4, 1, 2]], "expected": false},
+    {"name": "Same tree", "args": [[1, 2, 3], [1, 2, 3]], "expected": true},
+    {"name": "Leaf matches", "args": [[1, 2, 3], [3]], "expected": true},
+    {"name": "Single node, no match", "args": [[1, 2, 3], [4]], "expected": false},
+    {"name": "Larger than the main tree", "args": [[1], [1, 2]], "expected": false},
+    {"name": "Match needs the whole branch", "args": [[1, 2], [1]], "expected": false},
+    {"name": "Equal leaf under the root", "args": [[1, 1], [1]], "expected": true},
+    {"name": "Same values, other side", "args": [[1, 1], [1, null, 1]], "expected": false},
+    {"name": "Multi-digit values", "args": [[12], [2]], "expected": false},
+    {"name": "Negatives", "args": [[-5, -3, -8, -10], [-3, -10]], "expected": true},
+    {"name": "Equal chain, extra tail", "args": [[1, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1], [1, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 2]], "expected": false},
+    {"name": "Equal chain, shorter chain", "args": [[1, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1], [1, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1, null, 1]], "expected": true},
+    {"name": "Two thousand nodes", "args": [{"$range": [1, 2001, 1]}, [500, 1000, 1001, 2000]], "expected": true}
+  ]
+}

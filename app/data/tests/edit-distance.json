@@ -1,0 +1,27 @@
+{
+  "slug": "edit-distance",
+  "driver": "function",
+  "class": "Solution",
+  "method": "minDistance",
+  "params": [{"name": "word1", "type": "str"}, {"name": "word2", "type": "str"}],
+  "returns": "int",
+  "compare": "exact",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "args": ["horse", "ros"], "expected": 3},
+    {"name": "Example 2", "example": true, "args": ["intention", "execution"], "expected": 5},
+    {"name": "Both empty", "args": ["", ""], "expected": 0},
+    {"name": "Empty first", "args": ["", "a"], "expected": 1},
+    {"name": "Empty second", "args": ["abc", ""], "expected": 3},
+    {"name": "Single equal", "args": ["a", "a"], "expected": 0},
+    {"name": "Single different", "args": ["a", "b"], "expected": 1},
+    {"name": "Kitten", "args": ["kitten", "sitting"], "expected": 3},
+    {"name": "Sunday", "args": ["sunday", "saturday"], "expected": 3},
+    {"name": "Identical words", "args": ["abc", "abc"], "expected": 0},
+    {"name": "Swapped pair", "args": ["ab", "ba"], "expected": 2},
+    {"name": "Longer target", "args": ["a", "aaaa"], "expected": 3},
+    {"name": "Long words", "args": ["dinitrophenylhydrazine", "acetylphenylhydrazine"], "expected": 6},
+    {"name": "Large different letters", "args": [{"$str": {"n": 500, "chars": ["a"], "seed": 1}}, {"$str": {"n": 500, "chars": ["b"], "seed": 2}}], "expected": 500},
+    {"name": "Large input", "args": [{"$str": {"n": 500, "chars": ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"], "seed": 31}}, {"$str": {"n": 500, "chars": ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"], "seed": 32}}], "expected": 429}
+  ]
+}

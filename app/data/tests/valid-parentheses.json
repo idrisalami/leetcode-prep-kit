@@ -1,0 +1,30 @@
+{
+  "slug": "valid-parentheses",
+  "driver": "function",
+  "class": "Solution",
+  "method": "isValid",
+  "params": [{"name": "s", "type": "str"}],
+  "returns": "bool",
+  "compare": "exact",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "args": ["()"], "expected": true},
+    {"name": "Example 2", "example": true, "args": ["()[]{}"], "expected": true},
+    {"name": "Example 3", "example": true, "args": ["(]"], "expected": false},
+    {"name": "Example 4", "example": true, "args": ["([])"], "expected": true},
+    {"name": "Example 5", "example": true, "args": ["([)]"], "expected": false},
+    {"name": "Single open", "args": ["("], "expected": false},
+    {"name": "Single close", "args": [")"], "expected": false},
+    {"name": "Mismatched pair", "args": ["(]"], "expected": false},
+    {"name": "Wrong order", "args": [")("], "expected": false},
+    {"name": "Nested", "args": ["{[()]}"], "expected": true},
+    {"name": "Interleaved", "args": ["([)]"], "expected": false},
+    {"name": "Two opens", "args": ["(("], "expected": false},
+    {"name": "Extra close at the end", "args": ["()]"], "expected": false},
+    {"name": "Pairs in a row", "args": ["()[]{}"], "expected": true},
+    {"name": "Close then pairs", "args": ["]()"], "expected": false},
+    {"name": "Deep nesting", "args": ["(((((((((())))))))))"], "expected": true},
+    {"name": "Long balanced input", "args": [{"$str": {"chars": "()", "n": 10000, "seed": 1}}], "expected": true},
+    {"name": "Long unbalanced input", "args": [{"$str": {"chars": "()", "n": 10000, "seed": 2}}], "expected": false}
+  ]
+}

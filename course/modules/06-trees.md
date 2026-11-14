@@ -30,6 +30,7 @@
 - [Discover vs. visit](#discover-vs-visit)
 - [Common tree mistakes](#common-tree-mistakes)
 - [Drill set — cold, no IDE, no running](#drill-set--cold-no-ide-no-running)
+- [Also on the practice list](#also-on-the-practice-list)
 - [Before you submit anything](#before-you-submit-anything)
 - [Self-check answers](#self-check-answers)
 <!-- /toc -->
@@ -730,6 +731,23 @@ In the FIFO table: node 4 was discovered at step 2 and visited at step 4. It wai
 | 6 | [Diameter of Binary Tree](https://leetcode.com/problems/diameter-of-binary-tree/) (LC 543) | Post-order: return one thing, track another |
 
 **⚑ Checkpoint:** if the level order traversal in row 3 doesn't come out clean and compiling without notes, stop there. Reread §BFS and §0.5, primitive 4, and don't push on to row 4 until it does.
+
+## Also on the practice list
+
+These problems are on the app's practice list but are not drills in this module. Work them after the drill set if you want more reps.
+
+| # | Problem | Focus |
+|---|---|---|
+| 1 | [Same Tree](https://leetcode.com/problems/same-tree/) (LC 100) | Recursion on two trees at once |
+| 2 | [Subtree of Another Tree](https://leetcode.com/problems/subtree-of-another-tree/) (LC 572) | Recursion, with Same Tree as the helper |
+| 3 | [Balanced Binary Tree](https://leetcode.com/problems/balanced-binary-tree/) (LC 110) | Post-order: return one thing, track another |
+| 4 | [Lowest Common Ancestor of a Binary Search Tree](https://leetcode.com/problems/lowest-common-ancestor-of-a-binary-search-tree/) (LC 235) | Walking a BST using its ordering |
+| 5 | [Count Good Nodes in Binary Tree](https://leetcode.com/problems/count-good-nodes-in-binary-tree/) (LC 1448) | Pre-order: pass state down |
+| 6 | [Validate Binary Search Tree](https://leetcode.com/problems/validate-binary-search-tree/) (LC 98) | Pre-order: pass bounds down |
+| 7 | [Kth Smallest Element in a BST](https://leetcode.com/problems/kth-smallest-element-in-a-bst/) (LC 230) | In-order traversal |
+| 8 | [Construct Binary Tree from Preorder and Inorder Traversal](https://leetcode.com/problems/construct-binary-tree-from-preorder-and-inorder-traversal/) (LC 105) | Building a tree recursively from two traversals |
+| 9 | [Binary Tree Maximum Path Sum](https://leetcode.com/problems/binary-tree-maximum-path-sum/) (LC 124) | Post-order: return one thing, track another |
+| 10 | [Serialize and Deserialize Binary Tree](https://leetcode.com/problems/serialize-and-deserialize-binary-tree/) (LC 297) | Pre-order or BFS, with null markers |
 
 ## Before you submit anything
 

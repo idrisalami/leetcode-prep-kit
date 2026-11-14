@@ -1,0 +1,25 @@
+{
+  "slug": "partition-equal-subset-sum",
+  "driver": "function",
+  "class": "Solution",
+  "method": "canPartition",
+  "params": [{"name": "nums", "type": "int[]"}],
+  "returns": "bool",
+  "compare": "exact",
+  "time_limit_s": 2.0,
+  "cases": [
+    {"name": "Example 1", "example": true, "args": [[1, 5, 11, 5]], "expected": true},
+    {"name": "Example 2", "example": true, "args": [[1, 2, 3, 5]], "expected": false},
+    {"name": "Single element", "args": [[1]], "expected": false},
+    {"name": "Two equal", "args": [[2, 2]], "expected": true},
+    {"name": "Two ones", "args": [[1, 1]], "expected": true},
+    {"name": "Single maximum", "args": [[100]], "expected": false},
+    {"name": "Even sum, no split", "args": [[1, 2, 5]], "expected": false},
+    {"name": "Odd sum", "args": [[1, 2, 4]], "expected": false},
+    {"name": "Needs three together", "args": [[3, 3, 3, 4, 5]], "expected": true},
+    {"name": "One to seven", "args": [[1, 2, 3, 4, 5, 6, 7]], "expected": true},
+    {"name": "Even sum unreachable", "args": [[2, 2, 3, 5]], "expected": false},
+    {"name": "Large odd count", "args": [{"$repeat": [100, 199]}], "expected": false},
+    {"name": "Large input", "args": [{"$lcg": {"n": 200, "lo": 1, "hi": 100, "seed": 6}}], "expected": true}
+  ]
+}
