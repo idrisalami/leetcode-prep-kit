@@ -9,15 +9,19 @@
 // container (focus, scrolling, toasts, navigate, document.title, the nav, timers).
 
 import { get, post } from "./api.js";
-import { h, clear, hideTooltip, emptyState, createBeatCredit } from "./ui.js";
+import { h, clear, hideTooltip, emptyState, createBeatCredit, readJson, writeJson } from "./ui.js";
+import { isCoachPayload, needsWelcome, navLabel } from "./coachpick.js";
 
 // ---- routes -------------------------------------------------------------------
 
 const ROUTES = [
   { re: /^\/?$/, page: "home", load: () => import("./home.js"), params: () => ({}) },
+  { re: /^\/welcome\/?$/, page: "welcome", load: () => import("./welcome.js"), params: () => ({}) },
   { re: /^\/practice\/?$/, page: "problems", load: () => import("./problems.js"), params: () => ({}) },
   { re: /^\/practice\/([a-z0-9-]+)\/?$/, page: "practice", load: () => import("./practice.js"),
     params: (m) => ({ slug: m[1] }) },
+  { re: /^\/setup\/(plan|selfcheck|diagnostic)\/?$/, page: "setup", load: () => import("./setup.js"),
+    params: (m) => ({ step: m[1] }) },
   { re: /^\/review\/?$/, page: "review", load: () => import("./matrix.js"), params: () => ({}) },
   { re: /^\/module\/(\d\d)\/?$/, page: "module", load: () => import("./reader.js"),
     params: (m) => ({ kind: "module", id: m[1] }) },
@@ -102,6 +106,10 @@ function moduleMark(m) {
     title: m.solved + " of " + m.total + " solved" }, m.solved + "/" + m.total);
 }
 
+// The module list under "The course" folds away; the choice is kept across visits.
+const NAV_KEY = "prep.nav.modules";
+let modulesOpen = readJson(NAV_KEY) !== false;
+
 function drawNav() {
   clear(nav);
   const notePath = (key) => {
@@ -113,9 +121,22 @@ function drawNav() {
     h("a", { class: "brand nav-brand", href: "#/" }, "LeetCode Prep"),
     navLink("Home", "#/", "home"),
     navLink("Practice", "#/practice", "problems"),
-    navLink("Review", "#/review", "review"),
-    h("div", { class: "nav-sub" }, "The course"),
-    h("div", { class: "nav-modules" },
+    navLink("Skills matrix", "#/review", "review"),
+    h("button", { class: "nav-sub nav-toggle", type: "button", "aria-expanded": String(modulesOpen),
+      "aria-controls": "nav-modules", title: modulesOpen ? "Hide the modules" : "Show the modules",
+      onclick: (e) => {
+        modulesOpen = !modulesOpen;
+        writeJson(NAV_KEY, modulesOpen);
+        const btn = e.currentTarget;
+        btn.setAttribute("aria-expanded", String(modulesOpen));
+        btn.title = modulesOpen ? "Hide the modules" : "Show the modules";
+        nav.querySelector("#nav-modules").hidden = !modulesOpen;
+        markActive();
+      } },
+      h("span", null, "The course"),
+      h("span", { class: "nav-toggle-count" }, modules.length ? modules.length + " modules" : null),
+      h("span", { class: "nav-chevron", "aria-hidden": "true" })),
+    h("div", { class: "nav-modules", id: "nav-modules", hidden: !modulesOpen },
       modules.length ? modules.map((m) => navLink(m.id + " " + m.title, "#/module/" + m.id, "module:" + m.id,
         moduleMark(m)))
         : courseError ? h("div", { class: "nav-note nav-error", role: "status" },
@@ -124,12 +145,32 @@ function drawNav() {
         : h("span", { class: "nav-note" }, "Modules 00–10")),
     ...REFERENCE.map(([t, p]) => navLink(t, "#/doc/" + p, "doc:" + p)),
     h("div", { class: "nav-sub" }, "Your notes"),
-    navLink("Skills matrix", "#/review", "matrix-alias"),
     navLink("My mistakes", "#/doc/" + notePath("bugs"), "doc:" + notePath("bugs")),
     navLink("Learnings", "#/doc/" + notePath("learnings"), "doc:" + notePath("learnings")),
     navLink("Plan", "#/doc/" + notePath("plan"), "doc:" + notePath("plan")),
+    // The coach line appears once the server has said which tools it found.
+    // It stays pinned to the bottom of the menu, so it shows at any window height.
+    ...(coach ? [h("div", { class: "nav-coach" }, h("div", { class: "nav-sub" }, "Coach"),
+      navLink(navLabel(coach), "#/welcome", "welcome",
+        h("span", { class: "nav-mark" }, navLabel(coach) === "Not connected" ? "connect" : "change")))] : []),
   );
   markActive();
+}
+
+// The coach payload (/api/setup/coach): which tools are on this computer and which one is in
+// use. Null until it has loaded, and for good on a server from before the choice existed.
+let coach = null;
+
+/** Keep a fresh coach payload (the welcome page sends it after a choice) and redraw the nav. */
+export function setCoach(payload) {
+  if (!isCoachPayload(payload)) return;
+  coach = payload;
+  drawNav();
+}
+
+/** The last coach payload, or null. */
+export function coachData() {
+  return coach;
 }
 
 let activeKey = "";
@@ -141,6 +182,9 @@ function markActive() {
     if (on) a.setAttribute("aria-current", "page");
     else a.removeAttribute("aria-current");
   }
+  // With the list folded, the header stands in for the module being read.
+  const toggle = nav.querySelector(".nav-toggle");
+  if (toggle) toggle.classList.toggle("nav-toggle-on", !modulesOpen && activeKey.startsWith("module:"));
 }
 
 let courseError = null;
@@ -258,6 +302,7 @@ async function render(force) {
   };
 
   document.body.classList.toggle("full", current.page === "practice");
+  document.body.classList.toggle("bare", current.page === "welcome");
   activeKey = !m ? "" : m.route.page === "module" ? "module:" + m.params.id
     : m.route.page === "doc" ? "doc:" + m.params.path
     : m.route.page === "practice" ? "problems" : m.route.page;
@@ -359,4 +404,21 @@ setInterval(() => {
 
 drawNav();
 refreshNav();
-render(true);
+// Before the first page: ask which coach is connected. While nothing has been picked, the
+// welcome page comes first and remembers where the learner was going. A server from before the
+// choice existed has no such address; the app then opens as it always did.
+(async () => {
+  try {
+    const c = await get("/setup/coach");
+    if (isCoachPayload(c)) {
+      coach = c;
+      drawNav();
+      const raw = location.hash.replace(/^#/, "");
+      if (needsWelcome(c) && !/^\/welcome\/?$/.test(parseHash(location.hash).path)) {
+        history.replaceState(null, "", "#/welcome"
+          + (raw && raw !== "/" ? "?back=" + encodeURIComponent(raw) : ""));
+      }
+    }
+  } catch (e) { /* no coach choice on this server */ }
+  render(true);
+})();

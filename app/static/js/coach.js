@@ -4,6 +4,7 @@
 import { ApiError, stream, post, get } from "./api.js";
 import { h, clear, inlineCode } from "./ui.js";
 import { renderMarkdown } from "./md.js";
+import { isCoachPayload, coachStatus, unavailableText } from "./coachpick.js";
 
 // ---- pure helpers ---------------------------------------------------------------
 
@@ -15,10 +16,41 @@ export const CHIPS = [
   { kind: "complexity", label: "Check my complexity" },
 ];
 
+/** One line icon per ask, as SVG shapes on a 24 by 24 grid: [tag, attributes]. */
+export const ASK_ICONS = {
+  // a light bulb
+  hint: [["path", { d: "M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.2h5c0-.9.4-1.7 1.1-2.2A6 6 0 0 0 12 3z" }],
+    ["path", { d: "M9.5 19h5" }], ["path", { d: "M10.5 21.5h3" }]],
+  // a clipboard with a tick
+  review: [["rect", { x: "5", y: "4.5", width: "14", height: "16.5", rx: "2" }],
+    ["path", { d: "M9 4.5V3h6v1.5" }], ["path", { d: "m9 13 2.2 2.2L15.2 11" }]],
+  // a compass
+  approach: [["circle", { cx: "12", cy: "12", r: "9" }], ["path", { d: "m15.6 8.4-2.1 5.1-5.1 2.1 2.1-5.1z" }]],
+  // a growth curve on two axes
+  complexity: [["path", { d: "M4 4v16h16" }], ["path", { d: "M7.5 16.5c5 0 8.5-3.5 9.5-10" }]],
+};
+
 /** The small "who" line above a user turn. */
 export function userLabel(kind) {
   const chip = CHIPS.find((c) => c.kind === kind);
   return chip ? "You · pressed “" + chip.label + "”" : "You";
+}
+
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+/** The icon of one ask button. Decoration only: the label next to it says the same thing. */
+function askIcon(kind) {
+  const svg = document.createElementNS(SVG_NS, "svg");
+  const set = (node, attrs) => { for (const k of Object.keys(attrs)) node.setAttribute(k, attrs[k]); };
+  set(svg, { class: "ask-icon", viewBox: "0 0 24 24", width: "18", height: "18", fill: "none",
+    stroke: "currentColor", "stroke-width": "1.7", "stroke-linecap": "round", "stroke-linejoin": "round",
+    "aria-hidden": "true", focusable: "false" });
+  for (const [tag, attrs] of ASK_ICONS[kind] || []) {
+    const shape = document.createElementNS(SVG_NS, tag);
+    set(shape, attrs);
+    svg.appendChild(shape);
+  }
+  return svg;
 }
 
 const realClock = {
@@ -96,8 +128,19 @@ export function savedLine(saved, review) {
   return "No mistakes to save to your notes this time.";
 }
 
-const NOT_FOUND = "The coach needs the claude command-line tool, which is not on this computer. "
-  + "Everything else on this page works without it.";
+const REST_WORKS = "Everything else on this page works without it.";
+const NOT_FOUND = "The coach is not available on this computer. " + REST_WORKS;
+
+/**
+ * The lines of the "no coach" note for a setup answer (/api/setup/status):
+ * {text, choose, install}. `choose`: the welcome page can connect a tool; `install`: an older
+ * server, where the coach is Claude Code and nothing else.
+ */
+export function setupLines(setup) {
+  const why = unavailableText(coachStatus(setup)) || "The coach is not available on this computer.";
+  const choose = isCoachPayload(setup && setup.coach);
+  return { text: why + " " + REST_WORKS, choose, install: !choose };
+}
 const noDot = (s) => String(s || "").trim().replace(/[.\s]+$/, "");
 
 /** How long after the user's own Stop a `busy` answer is taken to be that stopped answer. */
@@ -147,19 +190,29 @@ export function coachError(err, { afterStop = false } = {}) {
 
 const PAINT_MS = 120;
 
+/** Milliseconds waited -> "0:07", "2:15": the clock on the final review's wait card. */
+export function waitClock(ms) {
+  let n = Math.floor(Number(ms) / 1000);
+  if (!Number.isFinite(n) || n < 0) n = 0;
+  return Math.floor(n / 60) + ":" + String(n % 60).padStart(2, "0");
+}
+
 /**
  * Build the coach pane. Options:
  *   slug, isStale()          the problem and the page's staleness check
- *   context() -> {code, notes}  what the coach reads with every ask
- *   claude                    false when /api/setup/status said claude is missing
- *   history                   items from historyItems() (chat turns and reviews, by time)
+ *   context() -> {code, notes, tab?}  what the coach reads with every ask; may be a promise
+ *   claude                    false when /api/setup/status said the coach's tool is missing
+ *   setup                     that /api/setup/status answer, to say which tool and why
+ *   history                  items from historyItems() (chat turns and reviews, by time)
  *   pendingSubmit             a submit id of this attempt still waiting for its final review
  *   reviewing                 true when the server is writing that review right now (another tab)
  *   onOpen()                  show the pane (a final review opens it)
+ *   onReview(state)           the final review moved on: "queued" | "writing" | "done" | "failed" | "again"
  * Returns {el, review(submitId), focusInput(), destroy()}.
  */
-export function createCoach({ slug, isStale, context, claude = true, history = [], pendingSubmit = null,
-  reviewing = false, onOpen }) {
+export function createCoach({ slug, isStale, context, claude = true, setup = null, history = [],
+  pendingSubmit = null, reviewing = false, onOpen, onReview }) {
+  let info = setup || { claude };
   const path = "/problem/" + encodeURIComponent(slug);
   let busy = null; // null | "chat" | "review"
   let ctrl = null;
@@ -176,7 +229,8 @@ export function createCoach({ slug, isStale, context, claude = true, history = [
   const empty = h("p", { class: "pr-coach-empty" },
     "Empty until you ask. The coach reads your code and the four boxes, and answers only the question you pick.");
   const setupNote = h("div", { class: "notice notice-warn pr-setup", hidden: !missing });
-  const chips = CHIPS.map((c) => h("button", { class: "chip", type: "button", onclick: () => ask(c.kind, "") }, c.label));
+  const chips = CHIPS.map((c) => h("button", { class: "ask-btn", type: "button", dataset: { kind: c.kind },
+    onclick: () => ask(c.kind, "") }, askIcon(c.kind), h("span", { class: "ask-label" }, c.label)));
   const input = h("textarea", { class: "pr-ask-input", rows: "2", placeholder: "Ask the coach…",
     "aria-label": "Question for the coach", maxlength: "200000" });
   const send = h("button", { class: "btn btn-primary btn-sm", type: "submit" }, "Send");
@@ -207,15 +261,25 @@ export function createCoach({ slug, isStale, context, claude = true, history = [
         const s = await get("/setup/status");
         if (stale()) return;
         missing = s && s.claude === false;
+        if (s) info = s;
       } catch (e) { /* keep the note */ }
       if (stale()) return;
       again.disabled = false;
       drawSetup();
       syncControls();
-      live.textContent = missing ? "The claude tool is still missing." : "The coach is ready.";
+      live.textContent = missing ? "The coach is still not available." : "The coach is ready.";
     });
-    setupNote.append(h("p", null, NOT_FOUND), h("p", null,
-      "Install Claude Code and sign in, then press Check again. The README's setup section has the steps."), again);
+    const lines = setupLines(info);
+    setupNote.append(h("p", null, lines.text));
+    if (lines.install) {
+      setupNote.append(h("p", null, "Install Claude Code and sign in, then press Check again. "
+        + "The README's “What you need” section has the link."));
+    }
+    setupNote.append(
+      h("div", { class: "pr-setup-btns" },
+        lines.choose ? h("a", { class: "btn btn-sm btn-primary", href: "#/welcome?back="
+          + encodeURIComponent("/practice/" + slug) }, "Choose a coach") : null,
+        again));
   };
 
   const syncControls = () => {
@@ -324,13 +388,17 @@ export function createCoach({ slug, isStale, context, claude = true, history = [
       body = next;
       if (stick) toBottom();
     }, PAINT_MS);
-    const ctx = context();
-    const send = () => stream(path + "/coach", { kind, message, code: ctx.code, notes: ctx.notes }, {
+    // The page may first finish a run or a save, so the coach reads the code as it is stored.
+    let ctx = null;
+    try { ctx = await context(); } catch (e) { outcome = e; }
+    const ask = ctx ? { kind, message, code: ctx.code, notes: ctx.notes } : null;
+    if (ask && ctx.tab !== undefined) ask.tab = ctx.tab;
+    const send = () => (!ask || mine.signal.aborted || stale() ? Promise.resolve() : stream(path + "/coach", ask, {
       signal: mine.signal,
       onDelta: (d) => { if (!mine.signal.aborted) { text += d; paint.call(); } },
       onDone: (full) => { outcome = "done"; if (full) text = full; },
       onError: (err) => { outcome = err; },
-    });
+    }));
     await send();
     // Asked again right after a Stop: the server may still be ending the stopped answer. Wait a
     // moment and ask once more, without showing the busy message in between.
@@ -407,6 +475,28 @@ export function createCoach({ slug, isStale, context, claude = true, history = [
   }
 
   // ---- the final review ----
+  const waitTimers = new Set();
+  const tell = (state) => { if (onReview) onReview(state); };
+
+  // The card shown while a review is being written: it has to be seen, so that nobody leaves
+  // the page thinking nothing is happening. The clock shows that the wait is alive.
+  function waitCard(title, ...lines) {
+    const clock = h("span", { class: "pr-rw-clock", "aria-hidden": "true" }, "0:00");
+    const card = h("div", { class: "pr-review-wait" },
+      h("div", { class: "pr-rw-head" },
+        h("span", { class: "pr-spin", "aria-hidden": "true" }),
+        h("strong", { class: "pr-rw-title" }, title),
+        clock),
+      lines.map((line) => h("p", { class: "pr-rw-text" }, line)));
+    const started = Date.now();
+    const timer = setInterval(() => {
+      if (!card.isConnected) { clearInterval(timer); waitTimers.delete(timer); return; }
+      clock.textContent = waitClock(Date.now() - started);
+    }, 1000);
+    waitTimers.add(timer);
+    return card;
+  }
+
   async function review(submitId) {
     if (stale() || !submitId) return;
     if (onOpen) onOpen();
@@ -416,14 +506,16 @@ export function createCoach({ slug, isStale, context, claude = true, history = [
       if (!log.querySelector(".pr-review-queued")) {
         add(h("p", { class: "pr-coach-note pr-review-queued" }, "The final review starts when this answer is done."));
       }
+      tell("queued");
       return;
     }
-    if (busy === "review") {
+    if (busy === "review" || awaited) {
       // One review at a time: this submit's code is not reviewed now.
       if (!log.querySelector(".pr-review-again")) {
         add(h("p", { class: "pr-coach-note pr-review-again", role: "status" },
           "A final review is already being written. Submit again when it is done to review the new code."));
       }
+      tell("again");
       return;
     }
     for (const n of log.querySelectorAll(".pr-review-queued, .pr-review-offer, .pr-review-again")) n.remove();
@@ -431,10 +523,12 @@ export function createCoach({ slug, isStale, context, claude = true, history = [
     syncControls();
     reviewCtrl = new AbortController();
     const mine = reviewCtrl;
-    const box = add(h("div", { class: "pr-msg pr-msg-coach pr-review-wait" },
-      h("div", { class: "pr-who" }, "Coach · final review"),
-      h("p", { class: "pr-wait" }, "Writing the final review. This can take up to three minutes; the rest of the page keeps working.")));
-    live.textContent = "Writing the final review.";
+    const wait = add(waitCard("Your final review is being written",
+      h("span", null, "It can take up to three minutes. ", h("b", null, "Stay on this page"),
+        " and it will show right here."),
+      "You can keep reading and editing while you wait. If you leave, it is still saved: you will find it here the next time you open this problem."));
+    live.textContent = "Your final review is being written. It can take up to three minutes. Stay on this page to read it.";
+    tell("writing");
     let res = null;
     let failure = null;
     try {
@@ -448,13 +542,15 @@ export function createCoach({ slug, isStale, context, claude = true, history = [
     busy = null;
     syncControls();
     if (res) {
-      box.replaceWith(reviewNode(res.review, res.saved, null));
+      wait.replaceWith(reviewNode(res.review, res.saved, null));
       live.textContent = "The final review is written.";
+      tell("done");
       toBottom();
       return;
     }
-    clear(box);
-    box.append(h("div", { class: "pr-who" }, "Coach · final review"));
+    const box = h("div", { class: "pr-msg pr-msg-coach" }, h("div", { class: "pr-who" }, "Coach · final review"));
+    wait.replaceWith(box);
+    tell("failed");
     if (failure instanceof ApiError && failure.code === "already_reviewed") {
       box.append(h("p", { class: "pr-coach-note" }, "This submit's final review is already written, or is being written now. Reload the page in a minute to see it."));
       return;
@@ -470,6 +566,7 @@ export function createCoach({ slug, isStale, context, claude = true, history = [
   }
 
   let pollTimer = null;
+  let awaited = false; // a review started before this page opened is still being written
   const offerNode = (id) => h("div", { class: "pr-coach-note pr-review-offer" },
     h("p", null, "Your last submit has no final review yet."),
     h("button", { class: "btn btn-sm", type: "button", onclick: () => review(id) }, "Write the final review"));
@@ -477,8 +574,11 @@ export function createCoach({ slug, isStale, context, claude = true, history = [
   // The server is already writing this review (started in another tab or before a reload): say
   // so, and look again every few seconds instead of offering a button that would only fail.
   function waitForReview(id) {
-    const note = add(h("p", { class: "pr-coach-note pr-review-wait", role: "status" },
-      "The written review is being prepared. It shows here when it is done."));
+    const note = add(waitCard("Your final review is being written",
+      "It was started before this page opened and can take up to three minutes. It shows right here when it is done."));
+    live.textContent = "Your final review is being written. It shows here when it is done.";
+    awaited = true;
+    tell("writing");
     const look = async () => {
       pollTimer = null;
       let p = null;
@@ -486,11 +586,15 @@ export function createCoach({ slug, isStale, context, claude = true, history = [
       if (stale()) return;
       const next = p ? reviewPoll(p.submits, id) : { action: "wait" };
       if (next.action === "wait") { pollTimer = setTimeout(look, REVIEW_POLL_MS); return; }
+      awaited = false;
       if (next.action === "done") {
         note.replaceWith(reviewNode(next.review, null, next.record));
+        live.textContent = "The final review is written.";
+        tell("done");
         toBottom();
       } else {
         note.replaceWith(offerNode(id));
+        tell(null);
       }
     };
     pollTimer = setTimeout(look, REVIEW_POLL_MS);
@@ -510,6 +614,8 @@ export function createCoach({ slug, isStale, context, claude = true, history = [
       if (ctrl) ctrl.abort();
       if (reviewCtrl) reviewCtrl.abort();
       if (pollTimer) clearTimeout(pollTimer);
+      for (const t of waitTimers) clearInterval(t);
+      waitTimers.clear();
       queuedReview = null;
     },
   };

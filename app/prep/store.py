@@ -1,5 +1,9 @@
 """The app's state: my-prep/app/state.json plus the solution files in my-prep/solutions/.
 
+A problem has one main solution file, `<slug>.py`, and may have more editor tabs, each its own
+file `<slug>.<id>.py`. Earlier versions of the code (every submit, and what a reset, a redo or a
+closed tab replaced) are kept under `solutions/history/<slug>/`.
+
 One lock guards every read and write; the state file is replaced atomically (temp file and
 os.replace), so a crash leaves either the old file or the new one. A state file of the wrong
 shape is set aside and the app starts fresh; malformed inner records are normalised on load.
@@ -7,6 +11,7 @@ shape is set aside and the app starts fresh; malformed inner records are normali
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import os
 import re
@@ -17,6 +22,12 @@ from datetime import datetime
 NOTE_KEYS = ("pattern", "complexity", "trace", "tests")
 SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 MAX_HEARTBEAT = 60
+MAIN_TAB = 1
+MAIN_NAME = "solution.py"
+MAX_TABS = 8
+MAX_TAB_NAME = 40
+MAX_HISTORY = 60
+LEGACY_HISTORY = 0  # the history id of a `<slug>.prev.py` that no history entry covers
 
 
 def _blank_notes():
@@ -36,12 +47,13 @@ def _blank_day():
 
 def _blank_state():
     return {"version": 1, "problems": {}, "days": {}, "modules_read": {}, "reps": {},
-            "matrix_written": {}, "warmup": None}
+            "matrix_written": {}, "warmup": None, "starred": {}, "setup": {}}
 
 
 # Known top-level keys and the types they must have; any other type sets the file aside.
 STATE_TYPES = {"version": int, "problems": dict, "days": dict, "modules_read": dict,
-               "reps": dict, "matrix_written": dict, "warmup": (dict, type(None))}
+               "reps": dict, "matrix_written": dict, "warmup": (dict, type(None)),
+               "starred": dict, "setup": dict}
 
 
 def _typed(value, default):
@@ -107,6 +119,8 @@ def _normalise(data):
                      if isinstance(k, str) and isinstance(v, dict)} if "days" in data else {}
     state["reps"] = {k: _normal_rows(v) for k, v in data["reps"].items()
                      if isinstance(k, str) and isinstance(v, list)} if "reps" in data else {}
+    state["starred"] = {k: v for k, v in state["starred"].items()
+                        if isinstance(k, str) and SLUG_RE.match(k) and isinstance(v, str)}
     warmup = state["warmup"]
     if isinstance(warmup, dict):
         warmup = dict(warmup)
@@ -119,6 +133,62 @@ def _check_slug(slug):
     if not isinstance(slug, str) or not SLUG_RE.match(slug):
         raise ValueError("unsafe slug: %r" % (slug,))
     return slug
+
+
+class TabError(ValueError):
+    """A tab request that cannot be done; `code` is "tab_limit", "no_tab" or "main_tab"."""
+
+    def __init__(self, code, detail):
+        ValueError.__init__(self, detail)
+        self.code = code
+
+
+def _is_id(value, low):
+    return isinstance(value, int) and not isinstance(value, bool) and value >= low
+
+
+def clean_tab_name(name, fallback):
+    """A tab name on one line, printable and short; `fallback` when nothing is left."""
+    if not isinstance(name, str):
+        return fallback
+    name = "".join(ch for ch in " ".join(name.split()) if ch.isprintable())
+    return name[:MAX_TAB_NAME].strip() or fallback
+
+
+def _tab_list(entry):
+    """The tabs of an entry, the main one first. An entry with no `tabs` has the main tab only."""
+    out = [{"id": MAIN_TAB, "name": MAIN_NAME}]
+    seen = {MAIN_TAB}
+    raw = entry.get("tabs")
+    for item in raw if isinstance(raw, list) else []:
+        if not isinstance(item, dict) or not _is_id(item.get("id"), MAIN_TAB):
+            continue
+        tab = item["id"]
+        if tab == MAIN_TAB:
+            out[0]["name"] = clean_tab_name(item.get("name"), MAIN_NAME)
+        elif tab not in seen:
+            seen.add(tab)
+            out.append({"id": tab, "name": clean_tab_name(item.get("name"), "solution-%d.py" % tab)})
+    return out
+
+
+def _free_tab_name(tabs):
+    taken = {t["name"] for t in tabs}
+    n = 2
+    while "solution-%d.py" % n in taken:
+        n += 1
+    return "solution-%d.py" % n
+
+
+def _history_list(entry):
+    """The well-formed history records of an entry, oldest first."""
+    raw = entry.get("history")
+    return [r for r in raw if isinstance(r, dict) and _is_id(r.get("id"), 1)
+            and isinstance(r.get("sha"), str)] if isinstance(raw, list) else []
+
+
+def _sha(code):
+    return hashlib.sha256(code.encode("utf-8")).hexdigest()[:16]
 
 
 class Store:
@@ -203,6 +273,31 @@ class Store:
     def _solution_path(self, slug, suffix=".py"):
         return os.path.join(self.paths.solutions_dir, _check_slug(slug) + suffix)
 
+    def _tab_path(self, slug, tab):
+        if not _is_id(tab, MAIN_TAB):
+            raise ValueError("unsafe tab: %r" % (tab,))
+        return self._solution_path(slug, ".py" if tab == MAIN_TAB else ".%d.py" % tab)
+
+    def _history_path(self, slug, hid):
+        if not _is_id(hid, 1):
+            raise ValueError("unsafe history id: %r" % (hid,))
+        return os.path.join(self.paths.solutions_dir, "history", _check_slug(slug), "%d.py" % hid)
+
+    @staticmethod
+    def _read_file(path):
+        try:
+            with open(path, encoding="utf-8", newline="") as fh:
+                return fh.read()
+        except FileNotFoundError:
+            return None
+
+    @staticmethod
+    def _remove_file(path):
+        try:
+            os.remove(path)
+        except FileNotFoundError:
+            pass
+
     def _write_file(self, path, text):
         tmp = path + ".tmp"
         try:
@@ -261,21 +356,68 @@ class Store:
             entry.setdefault(key, value)
         return entry
 
-    def code(self, slug):
+    def code(self, slug, tab=MAIN_TAB):
+        return self._read_file(self._tab_path(slug, tab))
+
+    def tabs(self, slug):
+        """The editor tabs of `slug` as `[{id, name}]`, the main one (id 1) first."""
+        _check_slug(slug)
+        with self._lock:
+            return _tab_list(self._state["problems"].get(slug) or {})
+
+    def tab_name(self, slug, tab):
+        """The name of the tab, or None when the problem has no such tab."""
+        for item in self.tabs(slug):
+            if item["id"] == tab:
+                return item["name"]
+        return None
+
+    def history(self, slug):
+        """Earlier versions of the code, oldest first: `[{id, at, attempt, tab, why, sha}]`, a
+        submitted one also with `submit_id, ok, passed, total`. A `<slug>.prev.py` left by an
+        older version of the app is listed with id 0 when no record holds the same code."""
+        _check_slug(slug)
+        with self._lock:
+            items = copy.deepcopy(_history_list(self._state["problems"].get(slug) or {}))
+        path = self._solution_path(slug, ".prev.py")
         try:
-            with open(self._solution_path(slug), encoding="utf-8", newline="") as fh:
-                return fh.read()
-        except FileNotFoundError:
+            prev = self._read_file(path)
+        except ValueError:  # not UTF-8
+            prev = None
+        if prev and prev.strip() and _sha(prev) not in {r["sha"] for r in items}:
+            try:
+                at = datetime.fromtimestamp(os.stat(path).st_mtime).isoformat(timespec="seconds")
+            except OSError:
+                at = ""
+            items.append({"id": LEGACY_HISTORY, "at": at, "attempt": None, "tab": MAIN_NAME,
+                          "why": "previous", "sha": _sha(prev)})
+            items.sort(key=lambda r: r.get("at") if isinstance(r.get("at"), str) else "")
+        return items
+
+    def history_code(self, slug, hid):
+        """The code of one history record, or None when there is no such record or file."""
+        _check_slug(slug)
+        if not _is_id(hid, LEGACY_HISTORY):
             return None
+        if hid == LEGACY_HISTORY:
+            return self._read_file(self._solution_path(slug, ".prev.py"))
+        with self._lock:
+            known = any(r["id"] == hid for r in
+                        _history_list(self._state["problems"].get(slug) or {}))
+        return self._read_file(self._history_path(slug, hid)) if known else None
 
     def draft_saved_at(self, slug):
-        """When the solution file was last written (the draft save time), as the store's local
+        """When a solution file was last written (the draft save time), as the store's local
         ISO stamp, or None when there is no file."""
-        try:
-            mtime = os.stat(self._solution_path(slug)).st_mtime
-        except OSError:
+        times = []
+        for tab in self.tabs(slug):
+            try:
+                times.append(os.stat(self._tab_path(slug, tab["id"])).st_mtime)
+            except OSError:
+                pass
+        if not times:
             return None
-        return datetime.fromtimestamp(mtime).isoformat(timespec="seconds")
+        return datetime.fromtimestamp(max(times)).isoformat(timespec="seconds")
 
     def submit(self, slug, submit_id):
         for rec in self.problem(slug)["submits"]:
@@ -304,11 +446,20 @@ class Store:
     def _bump(entry):
         entry["rev"] = _typed(entry.get("rev", 0), 0) + 1
 
-    def save_draft(self, slug, code, notes):
+    def save_draft(self, slug, code, notes, codes=None):
+        """Save the main tab's `code`, the code of other tabs (`codes`, by tab id) and the notes;
+        each may be None."""
         with self._lock:
-            # write the file first: a failed write raises before any state changes
+            files = dict(codes or {})
             if code is not None:
-                self._write_file(self._solution_path(slug), code)
+                files[MAIN_TAB] = code
+            known = {t["id"] for t in self.tabs(slug)}
+            for tab in files:
+                if tab not in known:
+                    raise TabError("no_tab", "This problem has no tab %r." % (tab,))
+            # write the files first: a failed write raises before any state changes
+            for tab, text in files.items():
+                self._write_file(self._tab_path(slug, tab), text)
             entry = self._entry(slug)
             if notes:
                 for key in NOTE_KEYS:
@@ -328,7 +479,9 @@ class Store:
             self._day()["runs"] += 1
             self._save()
 
-    def record_submit(self, slug, passed, total):
+    def record_submit(self, slug, passed, total, code=None, tab=MAIN_TAB, skeleton=None):
+        """Record a submit. With `code`, the submitted code is kept in the history and the
+        record points at it (`history`), so a later look or review sees what was submitted."""
         with self._lock:
             entry = self._entry(slug)
             at = self._stamp()
@@ -337,6 +490,17 @@ class Store:
                       "passed": passed, "total": total, "ok": ok,
                       "seconds": entry["attempt_seconds"], "hints_used": entry["attempt_hints"],
                       "reviewed": False}
+            if code is not None:
+                name = self.tab_name(slug, tab) or MAIN_NAME
+                record["tab"] = name
+                try:
+                    hid = self._archive(entry, slug, code, "submit", name, skeleton,
+                                        {"submit_id": record["id"], "ok": ok, "passed": passed,
+                                         "total": total})
+                except WriteFailed:  # the code is still in its tab; the submit counts all the same
+                    hid = None
+                if hid is not None:
+                    record["history"] = hid
             if entry["first_try"] is None and not entry["submits"]:
                 entry["first_try"] = ok
             entry["submits"].append(record)
@@ -391,31 +555,132 @@ class Store:
                 entry["attempt_seconds"] += seconds
             self._save()
 
-    def reset_code(self, slug, skeleton=None):
-        """Remove the solution file. Code that differs from `skeleton` is kept as
-        `<slug>.prev.py`, as Redo does. The rev rises only for a problem that has an entry or had
-        a file, so resetting an untouched problem creates no state."""
-        with self._lock:
-            current = self._solution_path(slug)
+    def _archive(self, entry, slug, code, why, tab_name, skeleton=None, result=None):
+        """Keep `code` in the history of `slug` and return the record's id; None for code not
+        worth keeping (blank, or the skeleton). The same code within one attempt is kept once: a
+        submit of it adds its result to the record. Caller holds the lock and saves."""
+        if not isinstance(code, str) or not code.strip():
+            return None
+        if skeleton is not None and code.strip() == skeleton.strip():
+            return None
+        sha = _sha(code)
+        history = _history_list(entry)
+        entry["history"] = history
+        for rec in history:
+            if rec["sha"] == sha and rec.get("attempt") == entry["attempt"]:
+                if result:
+                    rec.update(result, why="submit", at=self._stamp(), tab=tab_name)
+                    history.remove(rec)
+                    history.append(rec)
+                return rec["id"]
+        hid = max([r["id"] for r in history] + [_typed(entry.get("history_seq", 0), 0)]) + 1
+        self._write_file(self._history_path(slug, hid), code)
+        rec = {"id": hid, "at": self._stamp(), "attempt": entry["attempt"], "tab": tab_name,
+               "why": why, "sha": sha}
+        rec.update(result or {})
+        history.append(rec)
+        entry["history_seq"] = hid
+        while len(history) > MAX_HISTORY:
+            # the oldest version goes first, an accepted one only when nothing else is left
+            old = next((r for r in history[:-1] if not r.get("ok")), history[0])
+            history.remove(old)
             try:
-                saved = self.code(slug)
+                self._remove_file(self._history_path(slug, old["id"]))
+            except OSError:
+                pass
+        return hid
+
+    def add_tab(self, slug, name=None, code=None):
+        """Open one more editor tab and return it as `{id, name}`. An id is never used twice."""
+        with self._lock:
+            entry = self._entry(slug)
+            tabs = _tab_list(entry)
+            if len(tabs) >= MAX_TABS:
+                raise TabError("tab_limit", "A problem can have %d tabs at most. Close one first."
+                               % MAX_TABS)
+            tab = max([t["id"] for t in tabs] + [_typed(entry.get("tab_seq", MAIN_TAB), MAIN_TAB)]) + 1
+            if code is not None:
+                self._write_file(self._tab_path(slug, tab), code)
+            item = {"id": tab, "name": clean_tab_name(name, _free_tab_name(tabs))}
+            tabs.append(item)
+            entry["tabs"] = tabs
+            entry["tab_seq"] = tab
+            self._bump(entry)
+            self._save()
+            return dict(item)
+
+    def rename_tab(self, slug, tab, name):
+        with self._lock:
+            entry = self._entry(slug)
+            tabs = _tab_list(entry)
+            for item in tabs:
+                if item["id"] == tab:
+                    item["name"] = clean_tab_name(name, item["name"])
+                    entry["tabs"] = tabs
+                    self._bump(entry)
+                    self._save()
+                    return dict(item)
+            raise TabError("no_tab", "This problem has no tab %r." % (tab,))
+
+    def close_tab(self, slug, tab, skeleton=None):
+        """Close an extra tab. Its code moves to the history first, so nothing is lost."""
+        with self._lock:
+            entry = self._entry(slug)
+            tabs = _tab_list(entry)
+            if tab == MAIN_TAB:
+                raise TabError("main_tab", "The first tab stays open.")
+            item = next((t for t in tabs if t["id"] == tab), None)
+            if item is None:
+                raise TabError("no_tab", "This problem has no tab %r." % (tab,))
+            path = self._tab_path(slug, tab)
+            self._archive(entry, slug, self._read_file(path), "closed", item["name"], skeleton)
+            self._remove_file(path)
+            tabs.remove(item)
+            entry["tabs"] = tabs
+            self._bump(entry)
+            self._save()
+
+    def reset_code(self, slug, skeleton=None, tab=MAIN_TAB):
+        """Remove the solution file of a tab. Code that differs from `skeleton` goes to the
+        history, and the main tab's also stays as `<slug>.prev.py`, as Redo does. The rev rises
+        only for a problem that has an entry or had a file, so resetting an untouched problem
+        creates no state."""
+        with self._lock:
+            current = self._tab_path(slug, tab)
+            try:
+                saved = self.code(slug, tab)
             except ValueError:  # not UTF-8: keep it, it is not the skeleton
+                if tab != MAIN_TAB:
+                    raise
                 saved = False
             existed = saved is not None
-            if existed and skeleton is not None and saved != skeleton:
+            changed = existed and skeleton is not None and saved != skeleton
+            if changed and isinstance(saved, str):
+                self._archive(self._entry(slug), slug, saved, "reset",
+                              self.tab_name(slug, tab) or MAIN_NAME, skeleton)
+            if changed and tab == MAIN_TAB:
                 os.replace(current, self._solution_path(slug, ".prev.py"))
             elif existed:
-                try:
-                    os.remove(current)
-                except FileNotFoundError:
-                    pass
+                self._remove_file(current)
             if existed or slug in self._state["problems"]:
                 self._bump(self._entry(slug))
                 self._save()
 
-    def redo(self, slug):
+    def redo(self, slug, skeleton=None):
+        """Start a new attempt from one empty tab. The code of every tab goes to the history
+        first; the main tab's also stays as `<slug>.prev.py`."""
         with self._lock:
             entry = self._entry(slug)
+            for tab in _tab_list(entry):
+                path = self._tab_path(slug, tab["id"])
+                try:
+                    code = self._read_file(path)
+                except ValueError:  # not UTF-8: left where it is
+                    continue
+                self._archive(entry, slug, code, "redo", tab["name"], skeleton)
+                if tab["id"] != MAIN_TAB:
+                    self._remove_file(path)
+            entry.pop("tabs", None)
             current = self._solution_path(slug)
             if os.path.exists(current):
                 os.replace(current, self._solution_path(slug, ".prev.py"))
@@ -428,10 +693,47 @@ class Store:
             self._save()
             return entry["attempt"]
 
+    def starred(self):
+        """The starred slugs. A star is kept apart from the problem's entry: it is not an attempt."""
+        with self._lock:
+            return set(self._state["starred"])
+
+    def set_starred(self, slug, on):
+        _check_slug(slug)
+        with self._lock:
+            stars = self._state["starred"]
+            if on:
+                stars.setdefault(slug, self._stamp())
+            else:
+                stars.pop(slug, None)
+            self._save()
+            return slug in stars
+
     def set_module_read(self, module_id, read):
         with self._lock:
             self._state["modules_read"][module_id] = bool(read)
             self._save()
+
+    def setup(self, part):
+        """A copy of one part of the in-app setup (the discovery chat, the self-check, the
+        diagnostic), or {} when it has not started."""
+        with self._lock:
+            value = self._state["setup"].get(part)
+            return copy.deepcopy(value) if isinstance(value, dict) else {}
+
+    def update_setup(self, part, fn):
+        """Change one part of the setup under the lock: fn(part_dict) edits it in place.
+        Returns a copy of the part after the change."""
+        with self._lock:
+            value = self._state["setup"].get(part)
+            value = value if isinstance(value, dict) else {}
+            fn(value)
+            self._state["setup"][part] = value
+            self._save()
+            return copy.deepcopy(value)
+
+    def stamp(self):
+        return self._stamp()
 
     def set_warmup(self, date, slug, skipped):
         with self._lock:

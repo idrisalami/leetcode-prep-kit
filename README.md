@@ -1,62 +1,148 @@
-# LeetCode prep kit
+# LeetCode Prep Kit
 
-A coding-interview course in Python that you work through with Claude as your coach. It has eleven modules (from Big-O up to dynamic programming and heaps), a timed diagnostic, and reference sheets. Claude keeps your notes, scores your progress and plans your weeks. It won't write your solutions unless you ask for one.
+**A coding-interview course in Python, a practice app and an AI coach, all in one folder.**
 
-## Before you start
+You work through the course in a local web app. An AI coach (Claude Code or OpenAI Codex, running on your own account) sets up your plan, marks your answers, reviews your code and keeps your notes. It won't write your solutions unless you ask for one.
 
-- [Claude Code](https://claude.com/claude-code) installed.
-- Python 3 on your machine: Claude runs your code in every review.
-- A LeetCode account. Premium is optional: each 🔒 row in a drill table says what to do if it's locked, and the 🔒 problems on the app's practice list can be solved in the app without it.
-- This folder on your machine (clone it or unzip it).
+<p align="center">
+  <a href="docs/overview.mp4">
+    <img src="docs/overview.png" alt="Watch the 3-minute overview" width="760">
+  </a>
+  <br>
+  <a href="docs/overview.mp4"><b>▶ Watch the 3-minute overview</b></a>
+</p>
 
-## How to start
+If you already have the folder, the same video is at `docs/overview.mp4`.
 
-Open Claude Code in this folder and say *"let's start"*. Claude reads [CLAUDE.md](CLAUDE.md), sets up your notes and asks you a few questions. In a later session, say *"let's start"* again and it picks up where you stopped.
+---
 
-## The process
+## 1. What's inside
 
-| Step | What happens | Where |
+| Part | What it is |
+|---|---|
+| **The course** | Eleven modules, from Big-O up to dynamic programming and heaps. There's also a timed diagnostic and three reference sheets (Python toolkit, decision rules, bug checklist) |
+| **The app** | Runs in your browser, on your machine. It shows your lessons and your progress and has a code editor. You can solve 119 problems in it and run them on its tests |
+| **The coach** | Claude Code or OpenAI Codex, connected to the app. It plans your weeks, gives hints, reviews your code and updates your skills matrix |
+
+## 2. Quick start
+
+```bash
+git clone https://github.com/idrisalami/leetcode-prep-kit.git
+cd leetcode-prep-kit
+python3 app/server.py
+```
+
+You can also download the folder as a ZIP: on GitHub, click **Code → Download ZIP**, unzip it, and run the last line inside it.
+
+The command opens the app in your browser. Then:
+
+1. **The welcome page** looks for a coach tool on your computer and connects the one you pick. You can also go on without a coach for now.
+2. **The Home page** lists your first five steps (section 4). It ticks each one off as you finish it.
+3. **To stop the app**, press `Ctrl+C` in the terminal. To come back later, run `python3 app/server.py` again, and you pick up where you stopped.
+
+## 3. What you need
+
+| Need | Details |
+|---|---|
+| **macOS or Linux** | On Windows, run it inside [WSL](https://learn.microsoft.com/windows/wsl/install) |
+| **Python 3.9 or later** | The app uses only the standard library, so there is nothing to install |
+| **A coach tool, installed and signed in** | [Claude Code](https://claude.com/claude-code) (recommended; the kit was written for it) or [OpenAI Codex](https://github.com/openai/codex). The lessons, the editor and the tests work without one |
+| **A LeetCode account** | For the drills that link to LeetCode. Premium is optional: each 🔒 row in a drill table says what to do if a problem is locked, and the 🔒 problems in the app can be solved there without Premium |
+
+## 4. Your first five steps
+
+The Home page walks you through these.
+
+| Step | Where you do it | Needs the coach? |
 |---|---|---|
-| **1. Discovery** | A short conversation about your target, timeline, experience and goals. It sets the pace and the priorities | `my-prep/profile.md` |
-| **2. Module 00 self-check** | Short questions on the basics; you read the sections behind any you miss, then write two toolkit sections from memory | [course/modules/00-before-you-start.md](course/modules/00-before-you-start.md) |
-| **3. Diagnostic** | Seven timed problems, written without running the code, about 2h50 | [course/diagnostic.md](course/diagnostic.md) |
-| **4. Scoring and plan** | Claude runs your answers, fills your skills matrix and writes your plan | `my-prep/skills-matrix.md`, `my-prep/plan.md` |
-| **5. Blocks 01–10** | For each module: read its §0 → answer its self-check → drills, cold → a four-part submission per problem → Claude's review, by running your code → your lesson | [course/README.md](course/README.md), `my-prep/lessons/` |
+| **1. Download the problem statements** | A button on the Home page | No |
+| **2. Set up your plan** | A chat in the app: your target, your timeline, your hours per week | Yes |
+| **3. Answer module 00's self-check** | A page in the app; the coach marks it | Yes |
+| **4. Take the diagnostic** | A timed page with no Run button. The app runs your answers on its tests and the coach scores them | Yes |
+| **5. Solve your first problem** | The editor in the app | No, but with a coach you get a review |
 
-## Two folders
+## 5. How the course works
 
-- `course/` is the same for everyone: the modules, the diagnostic, the reference sheets and the templates. It isn't edited while you train.
-- `my-prep/` is yours, and everything about you and your work goes there. It is made from the templates the first time you start the app, or by Claude at your first session if you start there.
+| Stage | What happens |
+|---|---|
+| **1. Discovery** | A short talk about your target, timeline, experience and goals. It sets your pace and your priorities |
+| **2. Module 00 self-check** | Short questions on the basics. You read the sections behind any you miss |
+| **3. Diagnostic** | Seven timed problems, written without running the code, about 2h50 in one sitting ([course/diagnostic.md](course/diagnostic.md)) |
+| **4. Scoring and plan** | Your answers are scored, your skills matrix is filled in and your plan gets dates |
+| **5. Modules 01–10** | For each module: read its §0, answer its self-check, solve its drills cold, then the coach reviews your code by running it and you write a lesson. See [course/README.md](course/README.md) |
 
-## The app
+## 6. Talking to the coach outside the app
 
-The kit also has a local practice app: your lessons, your progress and a code editor in one web page. It uses only the Python standard library, so there is nothing to install. It needs Python 3.9 or later.
+The app and the terminal share the same notes, so you can switch between them at any time.
+
+- **Claude Code:** open a terminal in this folder, run `claude`, and say *"let's start"*. It reads [CLAUDE.md](CLAUDE.md) and picks up where you stopped.
+- **OpenAI Codex:** do the same with `codex`. [AGENTS.md](AGENTS.md) points it at the same coaching rules.
+
+To change the coach later, use the **Coach** line in the app's menu.
+
+## 7. What's in the folder
 
 ```
-python3 app/setup.py     # once: downloads the problem statements
-python3 app/server.py    # starts the app and opens your browser
+leetcode-prep-kit/
+├── app/            the practice app (python3 app/server.py)
+├── course/         the same for everyone
+│   ├── modules/    00 Before you start → 10 Heaps
+│   ├── reference/  Python toolkit, decision rules, bug checklist
+│   ├── templates/  blank copies of your notes files
+│   └── diagnostic.md
+├── docs/           the overview video
+├── CLAUDE.md       coaching rules for Claude Code
+└── AGENTS.md       the same rules for OpenAI Codex
 ```
 
-`setup.py` is also a button on the app's Home page. The statement text is saved to `app/data/statements/`, which git ignores. Nothing personal is sent and no cookies are used. `server.py` takes `--port N` and `--no-open`. It listens on port 8765, or the next free port up to 8775, and only on 127.0.0.1.
+**`my-prep/`** shows up the first time you start the app (or at your first session with the coach). Everything about you goes there: your plan, your skills matrix, your lessons, your solutions. Git ignores it, so your progress stays on your machine and never ends up in a commit.
+
+## 8. The app in detail
 
 | Page | What it does |
 |---|---|
-| Home | A daily warm-up, your totals and your progress per module |
-| Review | Your skills matrix, with filter chips and links to your notes pages. The lessons are under the module links in the menu |
-| Practice | The problem on the left, an editor in the middle, the coach on the right |
+| **Home** | A daily warm-up, your totals and your progress per module |
+| **Skills matrix** | Your skill levels, with filters and links to your notes. The lessons are under the module links in the menu |
+| **Practice** | The problem on the left, the editor in the middle, the coach on the right |
 
-118 problems from modules 01–10 can be solved in the app. The other drills in the lessons stay links to LeetCode. The coach uses the `claude` command-line tool (Claude Code) if it is installed; everything else works without it.
+- **Options:** `python3 app/server.py --port 9000` picks a port; `--no-open` skips opening the browser tab. By default the app uses port 8765, or the next free port up to 8775.
+- **Statements from the command line:** `python3 app/setup.py` does the same as the Download button. The text is saved to `app/data/statements/`, which git ignores.
+- **Drills outside the app:** the course's other drills link to LeetCode.
 
-**What it stores.** Your code goes in `my-prep/solutions/<slug>.py` and the app's state in `my-prep/app/state.json` (git-ignored; don't edit it by hand). It appends to `my-prep/learnings.md` and to the log table in `my-prep/bugs.md`. It updates three columns (Now, Evidence, Last tested) of topic rows in `my-prep/skills-matrix.md`, and fills Start too the first time, while that cell is `?`. It never lowers a level it didn't write itself. In the Evidence cell it owns only the part that ends in `(app)`: each final submit replaces that part and keeps any other text, yours or Claude's, in place. If `my-prep/` is missing on first start, it creates it from `course/templates/`.
+<details>
+<summary><b>What the app stores, and where</b></summary>
 
-**Known limits.**
+- Your code: `my-prep/solutions/<slug>.py`. Extra solution tabs are separate files next to it.
+- Earlier versions (every submit, plus the code from before a Reset, a Redo or a closed tab): `my-prep/solutions/history/`. Delete those files by hand if you want them gone.
+- App state: `my-prep/app/state.json` (don't edit it by hand). The coach you picked: `my-prep/app/settings.json`.
+- It appends to `my-prep/learnings.md` and to the log table in `my-prep/bugs.md`.
+- In `my-prep/skills-matrix.md` it updates the Now, Evidence and Last tested columns, and fills Start the first time, while that cell is `?`. It never lowers a level it didn't set itself. In the Evidence cell it owns only the part that ends in `(app)` and keeps any other text in place.
+- If `my-prep/` is missing, it is created again from `course/templates/`.
 
-- Passing the app's tests is not the same as being accepted on LeetCode. The tests are the kit's, not LeetCode's.
-- Your code runs on your machine with your permissions. It has a time limit and no sandbox, and the time limit is the only guard: a solution that allocates without bound can slow your machine until it stops.
-- Coach replies use Claude on your own account, so they count against your usage.
-- `my-prep/` must be a real folder, not a symlink. If it is a symlink, the app refuses to start.
+</details>
+
+## 9. Privacy
+
+- The app listens only on `127.0.0.1`, so nobody else on your network can reach it.
+- Downloading the statements sends nothing personal and uses no cookies.
+- Coach replies go through your own Claude Code or Codex account and count against your usage there. Nothing else leaves your machine.
+
+## 10. Known limits
+
+<details>
+<summary><b>Read these before you rely on the app</b></summary>
+
+- Passing the app's tests doesn't mean LeetCode will accept the solution. The tests are the kit's, not LeetCode's.
+- Your code runs on your machine with your permissions. It has a time limit but no sandbox, and the time limit is the only guard: a solution that keeps allocating memory can slow your machine until it stops.
 - If your code starts a child process of its own, that process can keep running after the time limit stops your code.
+- With OpenAI Codex, a coach reply appears all at once when it's finished. With Claude Code, you see it as it's written.
+- `my-prep/` must be a real folder, not a symlink, or the app refuses to start.
+- Start the app once. A second start finds the first one and opens it, but two starts at the same moment can both run, and then whichever saves last wins. If that happens, stop both and start one.
 - Several runs can go at once, for example from two tabs.
-- Start the app once. A second start finds the first and opens it, but two starts in the same instant can both run, and then the later save wins. If that happens, stop both and start one.
-- The scratch tab and the "coach hidden" choice are kept by your browser for each address. They do not follow you to another port or another browser.
-- Only one `.prev.py` is kept per problem. A new Redo or Reset replaces the older one.
+- The scratch tab and the "coach hidden" choice are stored in your browser for each address, so they don't carry over to another port or another browser.
+
+</details>
+
+## 11. Licence
+
+MIT. See [LICENSE](LICENSE).

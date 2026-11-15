@@ -1,5 +1,6 @@
 // Problem browser (spec §7.4): every problem on the list, grouped by module, with status,
-// difficulty and module filters, a "pick up where you left off" card, and one action per row.
+// difficulty, module and star filters, a "pick up where you left off" card, a star and one
+// action per row.
 //
 // Contract: render(container, params) returns its teardown at once and loads in the background,
 // so leaving the page aborts the fetches. Nothing outside the container is touched once
@@ -15,10 +16,13 @@ import {
   readJson, writeJson,
 } from "./ui.js";
 import { redoButton } from "./redo.js";
+import { starButton } from "./star.js";
 
 const STATUSES = ["new", "attempted", "solved"];
 const DIFFICULTIES = ["Easy", "Medium", "Hard"];
 const STATUS_WORDS = { all: "All", new: "Not started", attempted: "In progress", solved: "Solved" };
+const FILTER_KEYS = ["status", "difficulty", "module", "starred"];
+const NO_FILTERS = { status: "all", difficulty: "all", module: "all", starred: "all" };
 const FILTER_KEY = "prep.browse.filters";
 const OPENED_KEY = "prep.browse.opened";
 
@@ -26,20 +30,21 @@ const OPENED_KEY = "prep.browse.opened";
 
 const statusOf = (p) => (STATUSES.includes(p && p.status) ? p.status : "new");
 
-/** Raw query or stored values -> {status, difficulty, module}; anything unknown is "all". */
+/** Raw query or stored values -> {status, difficulty, module, starred}; anything unknown is "all". */
 export function normalizeFilters(raw, moduleIds = []) {
   const r = raw && typeof raw === "object" ? raw : {};
   const status = STATUSES.includes(r.status) ? r.status : "all";
   const d = typeof r.difficulty === "string" ? r.difficulty.trim().toLowerCase() : "";
   const difficulty = DIFFICULTIES.find((x) => x.toLowerCase() === d) || "all";
   const module = typeof r.module === "string" && moduleIds.includes(r.module) ? r.module : "all";
-  return { status, difficulty, module };
+  const starred = r.starred === "yes" ? "yes" : "all";
+  return { status, difficulty, module, starred };
 }
 
-/** Filters -> "status=…&difficulty=…&module=…" without the defaults; "" when all are "all". */
+/** Filters -> "status=…&difficulty=…&module=…&starred=yes" without the defaults; "" when all are "all". */
 export function filtersToQuery(f) {
   const parts = [];
-  for (const k of ["status", "difficulty", "module"]) {
+  for (const k of FILTER_KEYS) {
     if (f[k] && f[k] !== "all") parts.push(k + "=" + encodeURIComponent(f[k]));
   }
   return parts.join("&");
@@ -49,20 +54,22 @@ function matches(p, f, skip) {
   if (skip !== "status" && f.status !== "all" && statusOf(p) !== f.status) return false;
   if (skip !== "difficulty" && f.difficulty !== "all" && p.difficulty !== f.difficulty) return false;
   if (skip !== "module" && f.module !== "all" && p.module !== f.module) return false;
+  if (skip !== "starred" && f.starred === "yes" && !p.starred) return false;
   return true;
 }
 
-/** The problems that pass all three filters, in list order. */
+/** The problems that pass every filter, in list order. */
 export function filterProblems(problems, f) {
   return (problems || []).filter((p) => matches(p, f));
 }
 
-/** For each filter, how many problems each option would show with the other two applied. */
+/** For each filter, how many problems each option would show with the other filters applied. */
 export function facetCounts(problems, f, moduleIds = []) {
   const out = {
     status: { all: 0, new: 0, attempted: 0, solved: 0 },
     difficulty: { all: 0, Easy: 0, Medium: 0, Hard: 0 },
     module: { all: 0 },
+    starred: { all: 0, yes: 0 },
   };
   for (const id of moduleIds) out.module[id] = 0;
   for (const p of problems || []) {
@@ -75,6 +82,7 @@ export function facetCounts(problems, f, moduleIds = []) {
       out.module.all++;
       out.module[p.module] = (out.module[p.module] || 0) + 1;
     }
+    if (matches(p, f, "starred")) { out.starred.all++; if (p.starred) out.starred.yes++; }
   }
   return out;
 }
@@ -180,21 +188,22 @@ function actionButton(p, isStale) {
     href: "#/practice/" + p.slug, "aria-label": label, onclick: () => noteOpened(p.slug) }, a.label);
 }
 
-function problemRow(p, isStale) {
+function problemRow(p, isStale, onStar) {
   const premium = p.premium
     ? h("span", { class: "tag tag-premium", title: "Premium on LeetCode. You can still solve it here." },
       "premium", h("span", { class: "sr-only" }, ". Premium on LeetCode. You can still solve it here."))
     : null;
   return h("tr", { dataset: { slug: p.slug } },
+    h("td", { class: "td-star" }, starButton(p, { isStale, onChange: () => onStar(p) })),
     h("td", { class: "td-id" }, p.number != null ? String(p.number) : ""),
     h("td", { class: "td-title" },
       h("a", { href: "#/practice/" + p.slug, onclick: () => noteOpened(p.slug) }, p.title), premium),
-    h("td", null, difficultyPill(p.difficulty)),
-    h("td", null, statusMark(statusOf(p), p.seconds > 0 ? fmtDuration(p.seconds) : "")),
+    h("td", { class: "td-level" }, difficultyPill(p.difficulty)),
+    h("td", { class: "td-status" }, statusMark(statusOf(p), p.seconds > 0 ? fmtDuration(p.seconds) : "")),
     h("td", { class: "td-action" }, actionButton(p, isStale)));
 }
 
-function moduleCard(g, nextUp, isStale) {
+function moduleCard(g, nextUp, isStale, onStar) {
   const pct = g.total ? Math.round((g.solved / g.total) * 100) : 0;
   const head = h("div", { class: "browse-head" },
     h("h2", { class: "browse-title" },
@@ -208,9 +217,10 @@ function moduleCard(g, nextUp, isStale) {
     h("div", { class: "table-wrap" },
       h("table", { class: "table-hover browse-table" },
         h("thead", null, h("tr", null,
-          h("th", { class: "td-id" }, "#"), h("th", null, "Problem"), h("th", null, "Level"),
-          h("th", null, "Status"), h("th", null, h("span", { class: "sr-only" }, "Action")))),
-        h("tbody", null, g.rows.map((p) => problemRow(p, isStale))))));
+          h("th", { class: "td-star" }, h("span", { class: "sr-only" }, "Star")),
+          h("th", { class: "td-id" }, "#"), h("th", null, "Problem"), h("th", { class: "td-level" }, "Level"),
+          h("th", { class: "td-status" }, "Status"), h("th", null, h("span", { class: "sr-only" }, "Action")))),
+        h("tbody", null, g.rows.map((p) => problemRow(p, isStale, onStar))))));
 }
 
 function continueCard(p, others, onShowAll) {
@@ -236,8 +246,10 @@ function continueCard(p, others, onShowAll) {
 function chipGroup(label, options, onPick) {
   const buttons = options.map((o) => {
     const n = h("span", { class: "chip-n" });
+    const data = o.level ? { value: o.value, level: o.level } : { value: o.value };
     const b = h("button", { class: "chip", type: "button", "aria-pressed": "false",
-      dataset: { value: o.value }, onclick: () => onPick(o.value) }, o.text, n);
+      dataset: data, onclick: () => onPick(o.value) },
+      o.icon ? h("span", { class: "chip-icon", "aria-hidden": "true" }, o.icon) : null, o.text, n);
     if (o.tip) attachTooltip(b, () => ({ value: o.tip, label: n.textContent + " shown with the other filters" }));
     return { b, n, o };
   });
@@ -297,7 +309,7 @@ export function render(container, params = {}) {
     }
 
     const q = params.query || {};
-    const fromHash = ["status", "difficulty", "module"].some((k) => k in q);
+    const fromHash = FILTER_KEYS.some((k) => k in q);
     let filters = normalizeFilters(fromHash ? q : readJson(FILTER_KEY), moduleIds);
     // Filters restored from storage go into the hash once, so the URL describes the view.
     // replaceState fires no hashchange, so this does not render the page again.
@@ -319,41 +331,63 @@ export function render(container, params = {}) {
       if (!isStale()) history.replaceState(history.state, "", "#/practice" + (qs ? "?" + qs : ""));
       paint();
     };
-    clearBtn.addEventListener("click", () => set({ status: "all", difficulty: "all", module: "all" }));
+    clearBtn.addEventListener("click", () => set(NO_FILTERS));
 
     const statusChips = chipGroup("Status", ["all", ...STATUSES].map((v) => ({ value: v, text: STATUS_WORDS[v] })),
       (v) => set({ status: v }));
     const diffChips = chipGroup("Level", [{ value: "all", text: "All" },
-      ...DIFFICULTIES.map((d) => ({ value: d, text: d }))], (v) => set({ difficulty: v }));
+      ...DIFFICULTIES.map((d) => ({ value: d, text: d, level: d.toLowerCase() }))], (v) => set({ difficulty: v }));
     const modChips = chipGroup("Module", [{ value: "all", text: "All" },
       ...modules.map((m) => ({ value: m.id, text: m.id, tip: m.id + " · " + m.title }))], (v) => set({ module: v }));
 
-    const paint = () => {
+    const starChips = chipGroup("Stars", [{ value: "all", text: "All" },
+      { value: "yes", text: "Starred", icon: "★" }], (v) => set({ starred: v }));
+
+    // A star changed. With the star filter off only the counts move, so the row and the
+    // keyboard focus stay put. With it on, the row leaves the list and the focus goes to the
+    // next star, or to the filter when none is left.
+    const onStar = () => {
+      if (isStale()) return;
+      if (filters.starred !== "yes") { paintFilters(); return; }
+      paint();
+      const next = list.querySelector(".star-btn") || starChips.el.querySelector('[aria-pressed="true"]');
+      if (next) next.focus();
+    };
+
+    const paintFilters = () => {
       const c = facetCounts(problems, filters, moduleIds);
       statusChips.update(filters.status, c.status);
       diffChips.update(filters.difficulty, c.difficulty);
       modChips.update(filters.module, c.module);
+      starChips.update(filters.starred, c.starred);
       const shown = filterProblems(problems, filters).length;
       count.textContent = "Showing " + shown + " of " + problems.length + " problems";
       clearBtn.hidden = filtersToQuery(filters) === "";
+    };
+
+    const paint = () => {
+      paintFilters();
       clear(list);
       const groups = groupByModule(problems, modules, filters);
       if (!groups.length) {
-        list.append(h("section", { class: "card" }, emptyState("No problem matches these filters.",
-          h("button", { class: "btn", type: "button", onclick: () => set({ status: "all", difficulty: "all", module: "all" }) },
-            "Clear filters"))));
+        const noStars = filters.starred === "yes" && !problems.some((p) => p.starred);
+        list.append(h("section", { class: "card" }, emptyState(noStars
+          ? "No starred problem yet. Click the star at the start of a row to keep that problem here."
+          : "No problem matches these filters.",
+          h("button", { class: "btn", type: "button", onclick: () => set(NO_FILTERS) },
+            noStars ? "Show every problem" : "Clear filters"))));
         return;
       }
-      for (const g of groups) list.append(moduleCard(g, nextUp, isStale));
+      for (const g of groups) list.append(moduleCard(g, nextUp, isStale, onStar));
     };
 
     body.append(continueSlot,
       h("section", { class: "card browse-filters", "aria-label": "Filters" },
-        statusChips.el, diffChips.el, modChips.el,
+        statusChips.el, diffChips.el, modChips.el, starChips.el,
         h("div", { class: "browse-foot" }, count, clearBtn)),
       list);
     paint();
-    fillContinue(problems, continueSlot, () => set({ status: "attempted", difficulty: "all", module: "all" }));
+    fillContinue(problems, continueSlot, () => set({ ...NO_FILTERS, status: "attempted" }));
   };
 
   /** The most recently touched attempted problem, from the list's own last_at: no extra requests. */

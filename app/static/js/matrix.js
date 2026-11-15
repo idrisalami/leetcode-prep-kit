@@ -1,4 +1,4 @@
-// Review hub (spec §7.6, §7.7): the skills matrix as a table with Topics / Habits /
+// Skills matrix page (spec §7.6, §7.7; route #/review): the skills matrix as a table with Topics / Habits /
 // Communication chips, a weakest-first sort, the latest evidence for each row, and a Practise
 // button that opens the next problem for that row. Links to the learner's notes sit on top.
 //
@@ -18,7 +18,7 @@ const MATRIX_PATH = "my-prep/skills-matrix.md";
 const SECTIONS = ["topics", "habits", "communication"];
 const SECTION_WORDS = { topics: "Topics", habits: "Habits", communication: "Communication" };
 const REVISIT_DAYS = 14;
-const NO_PROBLEM = "No problem on the app's list trains this row; work it with the terminal coach.";
+const NO_PROBLEM = "No problem on the app's list trains this row yet; ask the coach for a drill that does.";
 
 // ---- pure helpers (tested in tests/matrix-review.test.mjs) ------------------------------
 
@@ -233,23 +233,31 @@ async function notesCard(signal, isStale) {
   }
   if (isStale()) return null;
   const want = [
-    ["skills-matrix", "Skills matrix file"], ["bugs", "My mistakes"], ["learnings", "Learnings"],
-    ["plan", "Plan"], ["next-session", "Next session"], ["diagnostic-report", "Diagnostic report"],
+    ["skills-matrix", "Skills matrix file", "The file behind this page: one row per skill."],
+    ["bugs", "My mistakes", "The mistakes you make more than once."],
+    ["learnings", "Learnings", "One entry per insight from a problem, newest first."],
+    ["plan", "Plan", "Your schedule from today to the interview."],
+    ["next-session", "Next session", "Where you stopped and what comes next."],
+    ["diagnostic-report", "Diagnostic report", "One block per diagnostic problem, with your code."],
   ];
   const optional = new Set(["next-session", "diagnostic-report"]);
   const items = [];
-  for (const [key, label] of want) {
+  for (const [key, label, about] of want) {
     const n = notes.find((x) => x.key === key);
     if (!n && optional.has(key)) continue;
     if (n && !n.exists && optional.has(key)) continue;
     const path = (n && n.path) || "my-prep/" + key + ".md";
     // A note still holding its untouched template opens like any other; the mark says why it is empty.
-    const mark = n && !n.exists ? " · not created yet" : n && n.is_template ? " (empty template)" : null;
-    items.push(h("li", null, h("a", { href: docRoute(path) }, label),
-      mark ? h("span", { class: "small muted" }, mark) : null));
+    const mark = n && !n.exists ? "Not created yet" : n && n.is_template ? "Empty" : null;
+    items.push(h("li", null, h("a", { class: "note-tile", href: docRoute(path) },
+      h("span", { class: "note-tile-head" },
+        h("span", { class: "note-tile-name" }, label),
+        mark ? h("span", { class: "note-tile-mark" }, mark) : null,
+        h("span", { class: "note-tile-go", "aria-hidden": "true" }, "→")),
+      h("span", { class: "note-tile-desc" }, about))));
   }
   return h("section", { class: "card review-notes", "aria-label": "Your notes" },
-    h("h2", null, "Your notes"), h("ul", { class: "review-links" }, items));
+    h("h2", null, "Your notes"), h("ul", { class: "review-links", dataset: { n: String(items.length) } }, items));
 }
 
 // ---- page ----------------------------------------------------------------------------

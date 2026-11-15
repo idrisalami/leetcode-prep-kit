@@ -229,14 +229,15 @@ class Server(ThreadingHTTPServer):
         super().server_close()
 
 
-def make_server(paths, port, coach_cmd=None, host=HOST):
+def make_server(paths, port, coach_cmd=None, host=HOST, codex_cmd=None):
     if host != HOST:
         raise ValueError("The prep app binds to 127.0.0.1 only.")
     # a handler class per server, so one server's settings (the timeout) never leak into another
     httpd = Server((HOST, port), type("Handler", (Handler,), {"timeout": REQUEST_TIMEOUT_S}))
     try:
         httpd.paths = paths
-        httpd.app = api.App(paths, httpd.server_address[1], coach_cmd=coach_cmd)
+        httpd.app = api.App(paths, httpd.server_address[1], coach_cmd=coach_cmd,
+                            codex_cmd=codex_cmd)
     except Exception:
         httpd.server_close()
         raise
@@ -256,8 +257,8 @@ def parse_args(argv):
     return args
 
 
-def coach_command():
-    raw = os.environ.get("PREP_COACH_CMD", "").strip()
+def coach_command(env="PREP_COACH_CMD"):
+    raw = os.environ.get(env, "").strip()
     return shlex.split(raw) if raw else None
 
 
@@ -372,7 +373,8 @@ def main(argv=None):
     httpd = None
     for port in ports:
         try:
-            httpd = make_server(paths, port, coach_cmd=coach_command())
+            httpd = make_server(paths, port, coach_cmd=coach_command(),
+                                codex_cmd=coach_command("PREP_CODEX_CMD"))
             break
         except OSError as exc:
             if exc.errno != errno.EADDRINUSE:

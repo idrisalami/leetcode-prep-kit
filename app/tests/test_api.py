@@ -50,15 +50,24 @@ def read(path):
         return fh.read()
 
 
+MISSING_CODEX = ["/nonexistent/codex-for-prep-tests"]
+PROVIDERS = [{"key": "claude", "label": "Claude Code", "command": "claude", "found": True,
+              "install_url": "https://claude.com/claude-code"},
+             {"key": "codex", "label": "OpenAI Codex", "command": "codex", "found": False,
+              "install_url": "https://github.com/openai/codex"}]
+COACH = {"choice": None, "active": "claude", "providers": PROVIDERS}
+
+
 class ApiCase(unittest.TestCase):
     coach_cmd = FAKE_CMD
+    codex_cmd = MISSING_CODEX  # never the machine's own codex
 
     def setUp(self):
         self.kit = full_kit(self)
         self.clock = Clock()
         self.errlog = io.StringIO()
         self.app = api.App(self.kit, PORT, coach_cmd=self.coach_cmd, now=self.clock,
-                           log=self.errlog)
+                           log=self.errlog, codex_cmd=self.codex_cmd)
         patcher = mock.patch.dict(os.environ, {"FAKE_COACH_MODE": "auto"})
         patcher.start()
         self.addCleanup(patcher.stop)
@@ -117,7 +126,10 @@ class OverviewTests(ApiCase):
     def test_fresh_overview(self):
         out = self.call("GET", "/api/overview")
         self.assertEqual(set(out), {"day", "current_module", "warmup", "kpis", "modules", "matrix",
-                                    "mistakes", "setup", "notices"})
+                                    "mistakes", "setup", "onboarding", "notices"})
+        self.assertEqual(out["onboarding"], {"discovery": False, "discovery_started": False,
+                                             "self_check": False, "diagnostic": False,
+                                             "diagnostic_started": False, "scored": False})
         self.assertEqual(out["notices"], [])
         self.assertEqual(out["day"], 1)
         self.assertEqual(out["current_module"], {"id": "01", "title": "Arrays and hashing"})
@@ -126,7 +138,7 @@ class OverviewTests(ApiCase):
         self.assertEqual(out["warmup"], {"slug": first_easy["slug"], "title": first_easy["title"],
                                          "difficulty": "Easy", "module": "01",
                                          "module_title": "Arrays and hashing", "done": False})
-        self.assertEqual(out["kpis"], {"solved": 0, "total": 118, "solved_week": 0, "seconds": 0,
+        self.assertEqual(out["kpis"], {"solved": 0, "total": 119, "solved_week": 0, "seconds": 0,
                                        "seconds_week": 0, "streak": 0, "best_streak": 0,
                                        "first_try_pct": 0, "first_try_n": 0, "submitted_n": 0})
         ids = [m["id"] for m in out["modules"]]
@@ -138,7 +150,8 @@ class OverviewTests(ApiCase):
         self.assertEqual(out["matrix"][0], {"id": "A1", "now": "?", "priority": "P0",
                                             "requirement": out["matrix"][0]["requirement"]})
         self.assertEqual(out["mistakes"], [])
-        self.assertEqual(out["setup"], {"statements_have": 0, "statements_total": 118, "claude": True})
+        self.assertEqual(out["setup"], {"statements_have": 0, "statements_total": 119,
+                                        "claude": True, "coach": COACH})
         # opening Home does not count as activity
         self.assertEqual(self.app.store.snapshot()["problems"], {})
 
@@ -167,6 +180,24 @@ class OverviewTests(ApiCase):
                                             "check": "trace the last element by hand",
                                             "source": "learnings"}])
 
+    def test_onboarding_follows_the_notes(self):
+        plan = os.path.join(self.kit.my_prep, "plan.md")
+        profile = os.path.join(self.kit.my_prep, "profile.md")
+        with open(profile, encoding="utf-8") as fh:
+            text = fh.read()
+        with open(profile, "w", encoding="utf-8") as fh:
+            fh.write(text.replace("## Target\n", "## Target\n\nA backend role, first round in a month.\n", 1))
+        self.assertEqual(self.call("GET", "/api/overview")["onboarding"],
+                         {"discovery": False, "discovery_started": True, "self_check": False,
+                          "diagnostic": False, "diagnostic_started": False, "scored": False})
+        with open(plan, encoding="utf-8") as fh:
+            text = fh.read()
+        with open(plan, "w", encoding="utf-8") as fh:
+            fh.write(text.replace("- [ ] Discovery", "- [x] Discovery").replace("- [ ] Diagnostic", "- [x] Diagnostic"))
+        self.assertEqual(self.call("GET", "/api/overview")["onboarding"],
+                         {"discovery": True, "discovery_started": True, "self_check": False,
+                          "diagnostic": True, "diagnostic_started": True, "scored": False})
+
     def test_warmup_another(self):
         first = self.call("GET", "/api/overview")["warmup"]["slug"]
         other = self.call("POST", "/api/warmup/another", {})["warmup"]
@@ -178,10 +209,10 @@ class OverviewTests(ApiCase):
 class ProblemTests(ApiCase):
     def test_problems_list(self):
         out = self.call("GET", "/api/problems")
-        self.assertEqual(len(out["problems"]), 118)
+        self.assertEqual(len(out["problems"]), 119)
         self.assertEqual(set(out["problems"][0]),
                          {"slug", "number", "title", "difficulty", "module", "category", "url",
-                          "premium", "status", "seconds", "solved_at", "last_at"})
+                          "premium", "status", "seconds", "solved_at", "last_at", "starred"})
         self.assertEqual({p["status"] for p in out["problems"]}, {"new"})
         self.assertEqual(out["modules"][0], {"id": "01", "title": "Arrays and hashing"})
         self.assertEqual(len(out["modules"]), 10)
@@ -211,6 +242,32 @@ class ProblemTests(ApiCase):
         by = {p["slug"]: p for p in self.call("GET", "/api/problems")["problems"]}
         self.assertEqual(by["two-sum"]["last_at"],
                          datetime.fromtimestamp(future).isoformat(timespec="seconds"))
+
+    def test_star_a_problem(self):
+        path = "/api/problem/two-sum/star"
+        self.assertIs(self.call("GET", "/api/problem/two-sum")["starred"], False)
+        self.assertEqual({p["starred"] for p in self.call("GET", "/api/problems")["problems"]}, {False})
+        self.assertEqual(self.call("POST", path, {"starred": True}), {"ok": True, "starred": True})
+        self.assertEqual(self.call("POST", path, {"starred": True}), {"ok": True, "starred": True})
+        by = {p["slug"]: p for p in self.call("GET", "/api/problems")["problems"]}
+        self.assertIs(by["two-sum"]["starred"], True)
+        self.assertEqual(by["two-sum"]["status"], "new")  # a star is not an attempt
+        self.assertEqual(sum(p["starred"] for p in by.values()), 1)
+        self.assertIs(self.call("GET", "/api/problem/two-sum")["starred"], True)
+        self.assertEqual(self.app.store.snapshot()["problems"], {})
+        again = api.App(self.kit, PORT, coach_cmd=self.coach_cmd, now=self.clock, log=self.errlog)
+        self.assertIs(json.loads(again.handle("GET", "/api/problem/two-sum", {},
+                                              {"Host": "127.0.0.1:%d" % PORT}, b"").body)["starred"], True)
+        self.assertEqual(self.call("POST", path, {"starred": False}), {"ok": True, "starred": False})
+        self.assertIs(self.call("GET", "/api/problem/two-sum")["starred"], False)
+
+    def test_star_refuses_bad_requests(self):
+        self.call("POST", "/api/problem/no-such-problem/star", {"starred": True}, status=404)
+        for body in ({"starred": "yes"}, {"starred": 1}, {}, {"starred": None}):
+            with self.subTest(body=body):
+                self.call("POST", "/api/problem/two-sum/star", body, status=400)
+        self.call("GET", "/api/problem/two-sum/star", status=405)
+        self.assertEqual(self.app.store.starred(), set())
 
     def test_problem_detail_does_not_create_state(self):
         out = self.call("GET", "/api/problem/two-sum")
@@ -344,8 +401,9 @@ class ProblemTests(ApiCase):
     def test_reset_and_redo(self):
         skeleton = self.call("GET", "/api/problem/two-sum")["skeleton"]
         self.call("PUT", "/api/problem/two-sum/draft", {"code": "x = 1\n", "notes": {}})
-        self.assertEqual(self.call("POST", "/api/problem/two-sum/reset", {}),
-                         {"code": skeleton, "rev": 2})
+        out = self.call("POST", "/api/problem/two-sum/reset", {})
+        self.assertEqual((out["code"], out["rev"]), (skeleton, 2))
+        self.assertEqual([(r["why"], r["tab"]) for r in out["history"]], [("reset", "solution.py")])
         self.assertEqual(self.call("GET", "/api/problem/two-sum")["code"], skeleton)
         out = self.call("POST", "/api/problem/two-sum/redo", {}, status=409)
         self.assertEqual(out["error"], "not_solved")
@@ -435,6 +493,193 @@ class ProblemTests(ApiCase):
         marks = [s["review_in_progress"] for s in self.call("GET", "/api/problem/two-sum")["submits"]]
         self.assertEqual(marks, [False, False])
         self.assertNotIn("review_in_progress", self.app.store.problem("two-sum")["submits"][0])
+
+
+class TabRouteTests(ApiCase):
+    """Editor tabs and the history of a problem's code."""
+
+    def detail(self):
+        return self.call("GET", "/api/problem/two-sum")
+
+    def add(self, **body):
+        return self.call("POST", "/api/problem/two-sum/tab", body)
+
+    def test_a_problem_starts_with_the_main_tab_and_no_history(self):
+        detail = self.detail()
+        self.assertEqual(detail["tabs"], [{"id": 1, "name": "solution.py", "code": detail["skeleton"]}])
+        self.assertEqual(detail["history"], [])
+        self.assertEqual(detail["code"], detail["skeleton"])
+
+    def test_a_new_tab_starts_from_the_skeleton_and_saves_on_its_own(self):
+        skeleton = self.detail()["skeleton"]
+        out = self.add()
+        self.assertEqual(out["tab"], {"id": 2, "name": "solution-2.py", "code": skeleton})
+        self.assertEqual(out["rev"], self.app.store.rev("two-sum"))
+        self.call("PUT", "/api/problem/two-sum/draft",
+                  {"codes": {"1": "a = 1\n", "2": "b = 2\n"}, "notes": {}})
+        detail = self.detail()
+        self.assertEqual([(t["id"], t["code"]) for t in detail["tabs"]], [(1, "a = 1\n"), (2, "b = 2\n")])
+        self.assertEqual(detail["code"], "a = 1\n")
+        self.assertEqual(read(os.path.join(self.kit.solutions_dir, "two-sum.py")), "a = 1\n")
+        self.assertEqual(read(os.path.join(self.kit.solutions_dir, "two-sum.2.py")), "b = 2\n")
+
+    def test_an_unchanged_draft_of_every_tab_does_not_move_the_rev(self):
+        self.add()
+        self.call("PUT", "/api/problem/two-sum/draft", {"codes": {"1": "a = 1\n", "2": "b = 2\n"}})
+        rev = self.app.store.rev("two-sum")
+        out = self.call("PUT", "/api/problem/two-sum/draft", {"codes": {"1": "a = 1\n", "2": "b = 2\n"}})
+        self.assertEqual(out["rev"], rev)
+
+    def test_a_draft_for_a_tab_that_is_not_there_writes_nothing(self):
+        out = self.call("PUT", "/api/problem/two-sum/draft",
+                        {"codes": {"1": "a = 1\n", "7": "b = 2\n"}}, status=400)
+        self.assertEqual(out["error"], "bad_tab")
+        self.assertIsNone(self.app.store.code("two-sum"))
+        for codes in ([], {"x": "a"}, {"0": "a"}, {"1": 3}, {"-1": "a"}, {"1.5": "a"}):
+            self.call("PUT", "/api/problem/two-sum/draft", {"codes": codes}, status=400)
+        self.call("PUT", "/api/problem/two-sum/draft",
+                  {"codes": {"1": "x" * (api.MAX_CODE + 1)}}, status=413)
+
+    def test_a_tab_can_be_named_and_renamed(self):
+        self.assertEqual(self.add(name="  brute force \n")["tab"]["name"], "brute force")
+        out = self.call("POST", "/api/problem/two-sum/tab/rename", {"tab": 2, "name": "one pass"})
+        self.assertEqual(out["tab"], {"id": 2, "name": "one pass"})
+        self.assertEqual([t["name"] for t in self.detail()["tabs"]], ["solution.py", "one pass"])
+        self.call("POST", "/api/problem/two-sum/tab/rename", {"tab": 2, "name": "  "}, status=400)
+        self.call("POST", "/api/problem/two-sum/tab/rename", {"tab": 2}, status=400)
+        for tab in (9, "2", True, 2.0, -1):
+            out = self.call("POST", "/api/problem/two-sum/tab/rename", {"tab": tab, "name": "x"},
+                            status=400)
+            self.assertEqual(out["error"], "bad_tab")
+        self.call("POST", "/api/problem/two-sum/tab", {"name": 3}, status=400)
+
+    def test_closing_a_tab_keeps_its_code_in_the_history(self):
+        self.add()
+        self.call("PUT", "/api/problem/two-sum/draft", {"codes": {"2": "b = 2\n"}})
+        out = self.call("POST", "/api/problem/two-sum/tab/close", {"tab": 2})
+        self.assertTrue(out["ok"])
+        self.assertEqual([(r["why"], r["tab"]) for r in out["history"]], [("closed", "solution-2.py")])
+        self.assertEqual([t["id"] for t in self.detail()["tabs"]], [1])
+        self.assertFalse(os.path.exists(os.path.join(self.kit.solutions_dir, "two-sum.2.py")))
+        hid = out["history"][0]["id"]
+        self.assertEqual(self.call("GET", "/api/problem/two-sum/history/%d" % hid),
+                         {"id": hid, "code": "b = 2\n"})
+        self.assertEqual(self.call("POST", "/api/problem/two-sum/tab/close", {"tab": 1},
+                                   status=400)["error"], "bad_tab")
+        self.assertEqual(self.call("POST", "/api/problem/two-sum/tab/close", {"tab": 2},
+                                   status=400)["error"], "bad_tab")
+
+    def test_a_history_entry_that_is_not_there_is_404(self):
+        self.call("GET", "/api/problem/two-sum/history/1", status=404)
+        self.call("GET", "/api/problem/two-sum/history/0", status=404)
+        self.call("GET", "/api/problem/no-such-problem/history/1", status=404)
+        self.call("POST", "/api/problem/two-sum/tab", {"from_history": 4}, status=404)
+        self.call("POST", "/api/problem/two-sum/tab", {"from_history": "1"}, status=400)
+        self.assertEqual([t["id"] for t in self.detail()["tabs"]], [1])
+
+    def test_an_earlier_version_opens_in_a_new_tab(self):
+        self.call("PUT", "/api/problem/two-sum/draft", {"code": "old = 1\n"})
+        history = self.call("POST", "/api/problem/two-sum/reset", {})["history"]
+        out = self.add(from_history=history[0]["id"], name="earlier")
+        self.assertEqual(out["tab"], {"id": 2, "name": "earlier", "code": "old = 1\n"})
+        self.assertEqual(self.detail()["tabs"][1]["code"], "old = 1\n")
+        # the copy left by a reset before there was a history opens the same way
+        self.assertEqual(self.call("GET", "/api/problem/two-sum/history/%d" % history[0]["id"])["code"],
+                         "old = 1\n")
+
+    def test_there_is_a_limit_to_the_tabs(self):
+        from app.prep import store
+        for _ in range(store.MAX_TABS - 1):
+            self.add()
+        out = self.call("POST", "/api/problem/two-sum/tab", {}, status=409)
+        self.assertEqual(out["error"], "tab_limit")
+        self.assertEqual(len(self.detail()["tabs"]), store.MAX_TABS)
+
+    def test_a_stale_page_cannot_change_the_tabs(self):
+        self.add()
+        rev = self.app.store.rev("two-sum")
+        self.call("PUT", "/api/problem/two-sum/draft", {"code": "a = 1\n"})
+        for path, body in (("/tab", {}), ("/tab/rename", {"tab": 2, "name": "x"}),
+                           ("/tab/close", {"tab": 2})):
+            resp = self.raw("POST", "/api/problem/two-sum" + path, dict(body, base_rev=rev))
+            self.assertEqual(resp.status, 409, path)
+            self.assertEqual(json.loads(resp.body.decode("utf-8"))["error"], "stale")
+        self.assertEqual([t["name"] for t in self.detail()["tabs"]], ["solution.py", "solution-2.py"])
+
+    def test_a_submit_from_a_tab_is_kept_with_its_result(self):
+        self.add(name="one pass")
+        out = self.call("POST", "/api/problem/two-sum/submit", {"code": TWO_SUM, "tab": 2})
+        self.assertTrue(out["solved"])
+        record = out["history"][-1]
+        self.assertEqual((record["why"], record["tab"], record["ok"], record["submit_id"]),
+                         ("submit", "one pass", True, out["submit_id"]))
+        self.assertEqual(self.call("GET", "/api/problem/two-sum/history/%d" % record["id"])["code"], TWO_SUM)
+        self.assertEqual(read(os.path.join(self.kit.solutions_dir, "two-sum.2.py")), TWO_SUM)
+        self.assertIsNone(self.app.store.code("two-sum"))  # the main tab was not touched
+        self.assertEqual(self.detail()["history"], out["history"])
+        bad = self.call("POST", "/api/problem/two-sum/submit", {"code": TWO_SUM, "tab": 5}, status=400)
+        self.assertEqual(bad["error"], "bad_tab")
+        self.call("POST", "/api/problem/two-sum/run", {"code": TWO_SUM, "tab": 5}, status=400)
+
+    def test_reset_of_one_tab_leaves_the_others(self):
+        skeleton = self.detail()["skeleton"]
+        self.add()
+        self.call("PUT", "/api/problem/two-sum/draft", {"codes": {"1": "a = 1\n", "2": "b = 2\n"}})
+        out = self.call("POST", "/api/problem/two-sum/reset", {"tab": 2})
+        self.assertEqual(out["code"], skeleton)
+        self.assertEqual([(t["id"], t["code"]) for t in self.detail()["tabs"]],
+                         [(1, "a = 1\n"), (2, skeleton)])
+        self.assertEqual([(r["why"], r["tab"]) for r in out["history"]], [("reset", "solution-2.py")])
+
+    def test_redo_keeps_every_tab_in_the_history_and_starts_with_one(self):
+        self.add()
+        self.call("PUT", "/api/problem/two-sum/draft", {"codes": {"2": "b = 2\n"}})
+        self.submit("two-sum", TWO_SUM)
+        self.call("POST", "/api/problem/two-sum/redo", {})
+        detail = self.detail()
+        self.assertEqual([t["id"] for t in detail["tabs"]], [1])
+        self.assertEqual(detail["code"], detail["skeleton"])
+        self.assertEqual(sorted((r["why"], r["tab"]) for r in detail["history"]),
+                         [("redo", "solution-2.py"), ("submit", "solution.py")])
+        accepted = [r for r in detail["history"] if r["why"] == "submit"][0]
+        self.assertEqual(self.call("GET", "/api/problem/two-sum/history/%d" % accepted["id"])["code"], TWO_SUM)
+
+    def test_the_coach_reads_the_tab_it_is_asked_about(self):
+        log = os.path.join(self.kit.root, "coach-log.json")
+        os.environ["FAKE_COACH_LOG"] = log
+        self.add()
+        self.call("POST", "/api/problem/two-sum/run",
+                  {"code": "class Solution:\n    def twoSum(self, nums, target):\n        return [9, 9]\n"})
+        sse(self.raw("POST", "/api/problem/two-sum/coach",
+                     {"kind": "review", "tab": 2, "code": "second_tab = True\n"}))
+        with open(log, encoding="utf-8") as fh:
+            prompt = json.load(fh)["stdin"]
+        self.assertIn("second_tab = True", prompt)
+        self.assertNotIn("return [9, 9]", prompt)
+        self.assertNotIn("[9,9]", prompt)  # the run was of the other tab
+        self.assertEqual(self.app.store.code("two-sum", 2), "second_tab = True\n")
+        sse(self.raw("POST", "/api/problem/two-sum/coach", {"kind": "review", "tab": 1}))
+        with open(log, encoding="utf-8") as fh:
+            prompt = json.load(fh)["stdin"]
+        self.assertIn("return [9, 9]", prompt)
+        self.assertIn("[9,9]", prompt)
+        resp = self.raw("POST", "/api/problem/two-sum/coach", {"kind": "review", "tab": 6})
+        self.assertEqual(resp.status, 400)
+
+    def test_the_final_review_is_of_the_code_that_was_submitted(self):
+        log = os.path.join(self.kit.root, "coach-log.json")
+        os.environ["FAKE_COACH_LOG"] = log
+        self.add()
+        sub = self.call("POST", "/api/problem/two-sum/submit", {"code": TWO_SUM, "tab": 2})
+        self.call("PUT", "/api/problem/two-sum/draft",
+                  {"codes": {"1": "main_tab = 1\n", "2": "edited_later = 2\n"}})
+        self.call("POST", "/api/problem/two-sum/run", {"code": "main_tab = 1\n"})
+        self.call("POST", "/api/problem/two-sum/review", {"submit_id": sub["submit_id"]})
+        with open(log, encoding="utf-8") as fh:
+            prompt = json.load(fh)["stdin"]
+        self.assertIn("seen[x] = i", prompt)
+        self.assertNotIn("edited_later", prompt)
+        self.assertNotIn("main_tab", prompt)
 
 
 class SaveErrorTests(ApiCase):
@@ -644,6 +889,14 @@ class MissingCoachTests(ApiCase):
         self.assertIs(self.call("GET", "/api/setup/status")["claude"], False)
         self.assertIs(self.call("GET", "/api/overview")["setup"]["claude"], False)
 
+    def test_nothing_chosen_and_nothing_found_means_no_coach(self):
+        out = self.call("GET", "/api/setup/coach")
+        self.assertIsNone(out["choice"])
+        self.assertIsNone(out["active"])
+        self.assertEqual([p["found"] for p in out["providers"]], [False, False])
+        self.call("POST", "/api/setup/coach", {"provider": "claude"}, status=409)
+        self.assertFalse(os.path.exists(self.kit.settings_file))
+
     def test_coach_stream_without_claude(self):
         resp = self.raw("POST", "/api/problem/two-sum/coach", {"kind": "hint", "message": "",
                                                                "code": None, "notes": None})
@@ -782,10 +1035,10 @@ class ConcurrentReviewTests(ApiCase):
         entered, release = threading.Event(), threading.Event()
         real = api.coach.final_review
 
-        def slow_review(context, cmd=None):
+        def slow_review(context, cmd=None, provider="claude"):
             entered.set()
             release.wait(5)
-            return real(context, cmd=cmd)
+            return real(context, cmd=cmd, provider=provider)
 
         results = []
         with mock.patch.object(api.coach, "final_review", side_effect=slow_review):
@@ -859,11 +1112,102 @@ class CourseTests(ApiCase):
         self.assertTrue(out["groups"][0]["title"])
 
 
+class CoachChoiceTests(ApiCase):
+    codex_cmd = FAKE_CMD
+
+    def hint(self):
+        return sse(self.raw("POST", "/api/problem/two-sum/coach",
+                            {"kind": "hint", "message": "", "code": TWO_SUM, "notes": None}))
+
+    def logged(self):
+        with open(os.environ["FAKE_COACH_LOG"], encoding="utf-8") as fh:
+            return json.load(fh)
+
+    def test_default_is_claude_until_a_choice_is_made(self):
+        out = self.call("GET", "/api/setup/coach")
+        self.assertIsNone(out["choice"])
+        self.assertEqual(out["active"], "claude")
+        self.assertEqual([(p["key"], p["found"]) for p in out["providers"]],
+                         [("claude", True), ("codex", True)])
+        self.assertFalse(os.path.exists(self.kit.settings_file))
+
+    def test_choosing_codex_routes_hints_and_reviews_through_it(self):
+        os.environ["FAKE_COACH_LOG"] = os.path.join(self.kit.root, "coach-log.json")
+        out = self.call("POST", "/api/setup/coach", {"provider": "codex"})
+        self.assertEqual((out["choice"], out["active"]), ("codex", "codex"))
+        self.assertEqual(json.loads(read(self.kit.settings_file)), {"coach": "codex"})
+        events = self.hint()
+        self.assertEqual(events[-1], {"done": True, "text": "First point.\n2. Second point."})
+        self.assertEqual(self.logged()["argv"][0], "exec")
+        sub = self.submit("two-sum", TWO_SUM)
+        review = self.call("POST", "/api/problem/two-sum/review", {"submit_id": sub["submit_id"]})
+        self.assertEqual(review["review"]["verdict"], "pass")
+        self.assertIn("--output-schema", self.logged()["argv"])
+        # the choice is read from the file, so it holds after a restart
+        again = api.App(self.kit, PORT, coach_cmd=self.coach_cmd, now=self.clock, log=self.errlog,
+                        codex_cmd=self.codex_cmd)
+        self.assertEqual(json.loads(again.handle(
+            "GET", "/api/setup/coach", {}, {"Host": "127.0.0.1:%d" % PORT}, b"").body)["active"], "codex")
+
+    def test_choosing_claude_back(self):
+        os.environ["FAKE_COACH_LOG"] = os.path.join(self.kit.root, "coach-log.json")
+        self.call("POST", "/api/setup/coach", {"provider": "codex"})
+        out = self.call("POST", "/api/setup/coach", {"provider": "claude"})
+        self.assertEqual((out["choice"], out["active"]), ("claude", "claude"))
+        self.hint()
+        self.assertIn("-p", self.logged()["argv"])
+
+    def test_no_coach(self):
+        out = self.call("POST", "/api/setup/coach", {"provider": "none"})
+        self.assertEqual((out["choice"], out["active"]), ("none", None))
+        self.assertIs(self.call("GET", "/api/setup/status")["claude"], False)
+        setup = self.call("GET", "/api/overview")["setup"]
+        self.assertIs(setup["claude"], False)
+        self.assertEqual(setup["coach"]["choice"], "none")
+
+    def test_bad_requests_change_nothing(self):
+        for body in ({"provider": "gemini"}, {"provider": None}, {}, {"provider": ["codex"]}):
+            self.call("POST", "/api/setup/coach", body, status=400)
+        self.assertFalse(os.path.exists(self.kit.settings_file))
+
+    def test_a_broken_settings_file_means_no_choice(self):
+        os.makedirs(os.path.dirname(self.kit.settings_file), exist_ok=True)
+        for text in ("{not json", "[1, 2]", '{"coach": "gemini"}', '{"coach": 3}'):
+            with open(self.kit.settings_file, "w", encoding="utf-8") as fh:
+                fh.write(text)
+            out = self.call("GET", "/api/setup/coach")
+            self.assertIsNone(out["choice"], text)
+            self.assertEqual(out["active"], "claude", text)
+        # and the next choice still saves over it
+        self.call("POST", "/api/setup/coach", {"provider": "codex"})
+        self.assertEqual(json.loads(read(self.kit.settings_file))["coach"], "codex")
+
+    def test_a_chosen_tool_that_went_missing(self):
+        self.call("POST", "/api/setup/coach", {"provider": "codex"})
+        self.app.codex_cmd = MISSING_CODEX
+        out = self.call("GET", "/api/setup/coach")
+        self.assertEqual((out["choice"], out["active"]), ("codex", "codex"))
+        self.assertIs(self.call("GET", "/api/setup/status")["claude"], False)
+        self.assertEqual(self.hint()[-1]["error"], "claude_not_found")
+
+    def test_choosing_a_tool_that_is_not_there(self):
+        self.app.codex_cmd = MISSING_CODEX
+        out = self.call("POST", "/api/setup/coach", {"provider": "codex"}, status=409)
+        self.assertEqual(out["error"], "coach_not_found")
+        self.assertFalse(os.path.exists(self.kit.settings_file))
+
+    def test_the_post_is_guarded_like_every_write(self):
+        resp = self.raw("POST", "/api/setup/coach", {"provider": "codex"},
+                        headers={"Origin": "http://evil.example"})
+        self.assertEqual(resp.status, 403)
+        self.assertFalse(os.path.exists(self.kit.settings_file))
+
+
 class SetupTests(ApiCase):
     def test_status_and_download(self):
         out = self.call("GET", "/api/setup/status")
-        self.assertEqual(out, {"statements": {"have": 0, "total": 118, "running": False, "failed": []},
-                               "claude": True})
+        self.assertEqual(out, {"statements": {"have": 0, "total": 119, "running": False, "failed": []},
+                               "claude": True, "coach": COACH})
 
         def opener(req, timeout):
             if req.full_url.startswith("https://neetcode.io/"):
@@ -878,7 +1222,7 @@ class SetupTests(ApiCase):
             self.assertLess(time.monotonic(), deadline)
             time.sleep(0.02)
         st = self.call("GET", "/api/setup/status")["statements"]
-        self.assertEqual((st["have"], st["total"]), (113, 118))
+        self.assertEqual((st["have"], st["total"]), (114, 119))
         self.assertEqual(len(st["failed"]), 5)
         self.assertIn("walls-and-gates", st["failed"])
 

@@ -1,7 +1,7 @@
 // Pure helpers of the coach pane. Run with: node --test "app/static/js/tests/*.test.mjs"
 import test from "node:test";
 import assert from "node:assert/strict";
-import { throttle, reviewBlocks, savedLine, coachError, CHIPS, userLabel, busyFromStop, STOP_GRACE_MS, reviewPoll } from "../coach.js";
+import { throttle, reviewBlocks, savedLine, coachError, setupLines, CHIPS, ASK_ICONS, userLabel, busyFromStop, STOP_GRACE_MS, reviewPoll, waitClock } from "../coach.js";
 import { ApiError } from "../api.js";
 
 function fakeClock() {
@@ -95,7 +95,7 @@ test("savedLine says what went to the notes", () => {
 test("coachError explains each failure and whether a retry makes sense", () => {
   const nf = coachError(new ApiError(503, "claude_not_found", "claude is not on PATH"));
   assert.equal(nf.setup, true);
-  assert.match(nf.text, /claude/);
+  assert.match(nf.text, /coach is not available/);
   const nf2 = coachError(new ApiError(0, "claude_not_found", "x"));
   assert.equal(nf2.setup, true);
   const busy = coachError(new ApiError(409, "busy", "The coach is already answering."));
@@ -117,10 +117,36 @@ test("coachError explains each failure and whether a retry makes sense", () => {
   }
 });
 
+test("the no-coach note names the tool and offers the right way out", () => {
+  const coach = (choice, active, found) => ({ choice, active, providers: [
+    { key: "claude", label: "Claude Code", command: "claude", found: found.claude, install_url: "https://claude.com/claude-code" },
+    { key: "codex", label: "OpenAI Codex", command: "codex", found: found.codex, install_url: "https://github.com/openai/codex" },
+  ] });
+  const rest = " Everything else on this page works without it.";
+  // The tool that was picked is gone: say which one, and offer the welcome page.
+  assert.deepEqual(setupLines({ claude: false, coach: coach("codex", "codex", { claude: true, codex: false }) }),
+    { text: "OpenAI Codex was not found on this computer." + rest, choose: true, install: false });
+  assert.deepEqual(setupLines({ claude: false, coach: coach("none", null, { claude: true, codex: true }) }),
+    { text: "No coach is connected." + rest, choose: true, install: false });
+  // An older server knows Claude Code only.
+  assert.deepEqual(setupLines({ claude: false }),
+    { text: "Claude Code was not found on this computer." + rest, choose: false, install: true });
+  // The page was told the tool was there and an ask found it gone.
+  assert.deepEqual(setupLines({ claude: true, coach: coach("claude", "claude", { claude: true, codex: false }) }),
+    { text: "The coach is not available on this computer." + rest, choose: true, install: false });
+  assert.equal(setupLines(null).install, true);
+});
+
 test("the four chips are the spec's, and a user turn names the chip pressed", () => {
   assert.deepEqual(CHIPS.map((c) => c.label),
     ["Give me a hint", "Review my solution", "Is my approach right?", "Check my complexity"]);
   assert.deepEqual(CHIPS.map((c) => c.kind), ["hint", "review", "approach", "complexity"]);
+  // every ask has an icon, and nothing but plain shapes goes into it
+  assert.deepEqual(Object.keys(ASK_ICONS), CHIPS.map((c) => c.kind));
+  for (const shapes of Object.values(ASK_ICONS)) {
+    assert.ok(shapes.length > 0);
+    for (const [tag] of shapes) assert.ok(["path", "rect", "circle"].includes(tag));
+  }
   assert.equal(userLabel("hint"), "You · pressed “Give me a hint”");
   assert.equal(userLabel("question"), "You");
   assert.equal(userLabel(undefined), "You");
@@ -152,4 +178,13 @@ test("reviewPoll (F6): wait while the server writes the review, show it when don
   assert.deepEqual(reviewPoll(mk({ reviewed: false, review_in_progress: false }), "s2"), { action: "offer" });
   assert.deepEqual(reviewPoll([], "s2"), { action: "offer" });
   assert.deepEqual(reviewPoll(null, "s2"), { action: "offer" });
+});
+
+test("waitClock shows minutes and seconds waited", () => {
+  assert.equal(waitClock(0), "0:00");
+  assert.equal(waitClock(7400), "0:07");
+  assert.equal(waitClock(135000), "2:15");
+  assert.equal(waitClock(600000), "10:00");
+  assert.equal(waitClock(-5), "0:00");
+  assert.equal(waitClock(undefined), "0:00");
 });

@@ -10,7 +10,7 @@ import unittest
 
 from app.prep import catalog, paths
 
-MODULE_COUNTS = {"01": 9, "02": 6, "03": 11, "04": 7, "05": 11, "06": 15, "07": 10, "08": 19,
+MODULE_COUNTS = {"01": 9, "02": 6, "03": 11, "04": 7, "05": 11, "06": 16, "07": 10, "08": 19,
                  "09": 23, "10": 7}
 BANNED_KEYS = {"content", "description", "statement"}
 
@@ -51,10 +51,10 @@ class CatalogDataTests(unittest.TestCase):
         self.assertTrue(os.path.isdir(os.path.join(self.paths.root, "course")))
         self.assertTrue(os.path.isfile(os.path.join(self.paths.data, "problems.json")))
 
-    def test_118_problems_with_unique_slugs(self):
+    def test_119_problems_with_unique_slugs(self):
         problems = self.cat.problems()
-        self.assertEqual(len(problems), 118)
-        self.assertEqual(len({p["slug"] for p in problems}), 118)
+        self.assertEqual(len(problems), 119)
+        self.assertEqual(len({p["slug"] for p in problems}), 119)
 
     def test_module_counts(self):
         self.assertEqual(self.cat.module_ids(), sorted(MODULE_COUNTS))

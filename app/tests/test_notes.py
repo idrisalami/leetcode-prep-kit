@@ -502,5 +502,62 @@ class EvidenceMergeTests(unittest.TestCase):
                          "whiteboard, 20 min; " + self.NEW)
 
 
+class FirstStepsTests(NotesCase):
+    NONE = {"discovery": False, "self_check": False, "diagnostic": False, "scored": False}
+
+    def steps(self, **on):
+        return dict(self.NONE, **on)
+
+    def tick(self, *names, mark="x"):
+        text = read(self.mine("plan.md"))
+        for name in names:
+            self.assertIn("- [ ] " + name, text)
+            text = text.replace("- [ ] " + name, "- [" + mark + "] " + name)
+        write(self.mine("plan.md"), text)
+
+    def test_the_fresh_templates_have_nothing_ticked_or_answered(self):
+        self.assertEqual(notes.plan_steps(self.paths), self.NONE)
+        self.assertIs(notes.profile_started(self.paths), False)
+
+    def test_a_ticked_line_counts_and_the_others_do_not(self):
+        self.tick("Discovery")
+        self.assertEqual(notes.plan_steps(self.paths), self.steps(discovery=True))
+        self.tick("Diagnostic", mark="X")
+        self.assertEqual(notes.plan_steps(self.paths), self.steps(discovery=True, diagnostic=True))
+
+    def test_module_00_and_scoring_are_first_steps_too(self):
+        self.tick("Module 00", "Scoring and plan")
+        self.assertEqual(notes.plan_steps(self.paths), self.steps(self_check=True, scored=True))
+
+    def test_ticking_a_block_line_is_not_a_first_step(self):
+        self.tick("01 Arrays and hashing")
+        self.assertEqual(notes.plan_steps(self.paths), self.NONE)
+
+    def test_a_rewritten_plan_with_bold_labels_and_windows_line_ends(self):
+        write(self.mine("plan.md"), "# Plan\r\n\r\n* [x] **Discovery**: done\r\n+ [ ] **Diagnostic**\r\n")
+        self.assertEqual(notes.plan_steps(self.paths), self.steps(discovery=True))
+
+    def test_ticks_inside_a_code_block_are_ignored(self):
+        write(self.mine("plan.md"), "# Plan\n\n```\n- [x] Discovery\n- [x] Diagnostic\n```\n")
+        self.assertEqual(notes.plan_steps(self.paths), self.NONE)
+
+    def test_missing_files_are_not_started(self):
+        os.remove(self.mine("plan.md"))
+        os.remove(self.mine("profile.md"))
+        self.assertEqual(notes.plan_steps(self.paths), self.NONE)
+        self.assertIs(notes.profile_started(self.paths), False)
+
+    def test_one_answer_under_a_topic_starts_the_profile(self):
+        text = read(self.mine("profile.md"))
+        write(self.mine("profile.md"), text.replace("## Goals\n", "## Goals\n\nPass the phone screen.\n", 1))
+        self.assertIs(notes.profile_started(self.paths), True)
+
+    def test_text_above_the_first_topic_and_bold_notes_do_not_count_as_placeholders(self):
+        write(self.mine("profile.md"), "# Profile\n\nIntro text.\n\n## Target\n\n*what you are aiming for*\n")
+        self.assertIs(notes.profile_started(self.paths), False)
+        write(self.mine("profile.md"), "# Profile\n\n## Target\n\n**Company:** a search start-up\n")
+        self.assertIs(notes.profile_started(self.paths), True)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -1,4 +1,4 @@
-// Pure helpers of the Review hub (matrix.js). Run with:
+// Pure helpers of the Skills matrix page (matrix.js). Run with:
 // node --test "app/static/js/tests/*.test.mjs"
 import test from "node:test";
 import assert from "node:assert/strict";

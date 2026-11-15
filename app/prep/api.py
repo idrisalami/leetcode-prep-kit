@@ -14,8 +14,8 @@ import traceback
 from datetime import datetime
 
 from app.prep import catalog as catalog_mod
-from app.prep import coach, course, notes, runner, statements, stats
-from app.prep.store import MAX_HEARTBEAT, NOTE_KEYS, Store, WriteFailed
+from app.prep import coach, course, notes, onboard, runner, settings, statements, stats
+from app.prep.store import MAIN_TAB, MAX_HEARTBEAT, NOTE_KEYS, Store, TabError, WriteFailed
 
 MAX_CODE = 200000
 MAX_BODY = 2000000
@@ -107,10 +107,11 @@ def _floor_median(levels):
 
 
 class App:
-    def __init__(self, paths, port, coach_cmd=None, now=datetime.now, log=None):
+    def __init__(self, paths, port, coach_cmd=None, now=datetime.now, log=None, codex_cmd=None):
         self.paths = paths
         self.port = port
         self.coach_cmd = list(coach_cmd) if coach_cmd else None
+        self.codex_cmd = list(codex_cmd) if codex_cmd else None
         self.now = now
         self.log = log if log is not None else sys.stderr
         self.created = notes.bootstrap(paths)
@@ -140,6 +141,11 @@ class App:
             (r"/api/problem/%s/review" % SLUG, {"POST": self.review}),
             (r"/api/problem/%s/reset" % SLUG, {"POST": self.reset}),
             (r"/api/problem/%s/redo" % SLUG, {"POST": self.redo}),
+            (r"/api/problem/%s/tab" % SLUG, {"POST": self.tab_add}),
+            (r"/api/problem/%s/tab/rename" % SLUG, {"POST": self.tab_rename}),
+            (r"/api/problem/%s/tab/close" % SLUG, {"POST": self.tab_close}),
+            (r"/api/problem/%s/history/(\d{1,9})" % SLUG, {"GET": self.history_code}),
+            (r"/api/problem/%s/star" % SLUG, {"POST": self.star}),
             (r"/api/heartbeat", {"POST": self.heartbeat}),
             (r"/api/course", {"GET": self.course}),
             (r"/api/doc", {"GET": self.doc}),
@@ -147,6 +153,16 @@ class App:
             (r"/api/matrix", {"GET": self.matrix}),
             (r"/api/setup/statements", {"POST": self.setup_statements}),
             (r"/api/setup/status", {"GET": self.setup_status}),
+            (r"/api/setup/coach", {"GET": self.setup_coach, "POST": self.setup_coach_set}),
+            (r"/api/setup/discovery", {"GET": self.discovery}),
+            (r"/api/setup/chat", {"POST": self.discovery_chat}),
+            (r"/api/setup/discovery/reset", {"POST": self.discovery_reset}),
+            (r"/api/setup/discovery/finish", {"POST": self.discovery_finish}),
+            (r"/api/setup/selfcheck", {"GET": self.selfcheck, "PUT": self.selfcheck_save}),
+            (r"/api/setup/selfcheck/mark", {"POST": self.selfcheck_mark}),
+            (r"/api/setup/diagnostic", {"GET": self.diagnostic}),
+            (r"/api/setup/diagnostic/answer", {"PUT": self.diagnostic_answer}),
+            (r"/api/setup/diagnostic/finish", {"POST": self.diagnostic_finish}),
         ]
         self.routes = [(re.compile("^%s$" % pat), methods) for pat, methods in self.routes]
 
@@ -298,6 +314,48 @@ class App:
             raise ApiError(413, "too_large", "The code is longer than %d characters." % MAX_CODE)
         return code
 
+    def _tab(self, slug, data):
+        """The optional `tab` of a request: the id of one of the problem's editor tabs. The
+        main tab when absent."""
+        tab = data.get("tab")
+        if tab is None:
+            return MAIN_TAB
+        if isinstance(tab, bool) or not isinstance(tab, int) or self.store.tab_name(slug, tab) is None:
+            raise ApiError(400, "bad_tab", "This problem has no such tab. Reload the page.")
+        return tab
+
+    @staticmethod
+    def _codes(data):
+        """The optional `codes` of a draft: the code of several tabs, keyed by tab id."""
+        value = data.get("codes")
+        if value is None:
+            return {}
+        if not isinstance(value, dict):
+            raise bad("codes must be an object.")
+        out = {}
+        for key, text in value.items():
+            if not re.match(r"^[1-9]\d{0,8}$", key):
+                raise bad("codes is keyed by tab id.")
+            if not isinstance(text, str):
+                raise bad("The code of tab %s must be a string." % key)
+            if len(text) > MAX_CODE:
+                raise ApiError(413, "too_large", "The code is longer than %d characters." % MAX_CODE)
+            out[int(key)] = text
+        return out
+
+    @staticmethod
+    def _tab_error(exc):
+        return ApiError(409 if exc.code == "tab_limit" else 400,
+                        "tab_limit" if exc.code == "tab_limit" else "bad_tab", str(exc))
+
+    def _tabs(self, slug, problem):
+        """The editor tabs with their code; a tab with no file shows the skeleton."""
+        out = []
+        for tab in self.store.tabs(slug):
+            code = self.store.code(slug, tab["id"])
+            out.append(dict(tab, code=code if code is not None else problem.get("skeleton", "")))
+        return out
+
     @staticmethod
     def _notes(data):
         value = data.get("notes")
@@ -329,21 +387,30 @@ class App:
             if base_rev != current:
                 raise ApiError(409, "stale", STALE_DETAIL, extra={"rev": current})
 
-    def _save_changed(self, slug, problem, code, notes_in, base_rev=None):
-        """Save the draft only when the code or a note differs from what is stored. A stale
-        `base_rev` raises 409 before anything is written."""
+    def _save_changed(self, slug, problem, code, notes_in, base_rev=None, tab=MAIN_TAB, codes=None):
+        """Save the draft only when the code of a tab or a note differs from what is stored.
+        `code` is the code of `tab`; `codes` holds more tabs by id. A stale `base_rev` raises
+        409 and an unknown tab 400, before anything is written."""
         with self.lock:
             self._check_rev(slug, base_rev)
-            stored = self.store.code(slug)
-            current = stored if stored is not None else problem.get("skeleton", "")
-            code_changed = code is not None and code != current
+            files = dict(codes or {})
+            if code is not None:
+                files[tab] = code
+            known = {t["id"] for t in self.store.tabs(slug)}
+            changed = {}
+            for key, text in files.items():
+                if key not in known:
+                    raise ApiError(400, "bad_tab", "This problem has no such tab. Reload the page.")
+                stored = self.store.code(slug, key)
+                if text != (stored if stored is not None else problem.get("skeleton", "")):
+                    changed[key] = text
             old = self.store.problem(slug)["notes"]
             notes_changed = bool(notes_in) and any(
                 isinstance(notes_in.get(k), str) and notes_in[k] != old.get(k, "")
                 for k in NOTE_KEYS)
-            if code_changed or notes_changed:
-                self.store.save_draft(slug, code if code_changed else None,
-                                      notes_in if notes_changed else None)
+            if changed or notes_changed:
+                self.store.save_draft(slug, None, notes_in if notes_changed else None,
+                                      changed or None)
 
     def _statement(self, slug):
         data = self.catalog.statement(slug)
@@ -361,14 +428,17 @@ class App:
         return {"kind": kind, "passed": result.get("passed", 0), "total": result.get("total", 0),
                 "fatal": result.get("fatal"), "failing": failing}
 
-    def _context(self, slug, problem, entry, code=None, message=""):
-        stored = self.store.code(slug)
+    def _context(self, slug, problem, entry, code=None, message="", tab=MAIN_TAB):
         if code is None:
+            stored = self.store.code(slug, tab)
             code = stored if stored is not None else problem.get("skeleton", "")
+        results = self.last_results.get(slug)
+        if results and results.get("tab", MAIN_TAB) != tab:
+            results = None  # the last run was of another tab's code
         return {"title": problem["title"], "number": problem.get("number"),
                 "difficulty": problem.get("difficulty"), "statement": self._statement(slug),
                 "code": code, "notes": entry.get("notes") or {},
-                "results": self.last_results.get(slug), "chat": entry.get("chat") or [],
+                "results": results, "chat": entry.get("chat") or [],
                 "top_bugs": notes.top_bugs(self.paths), "message": message}
 
     def _warmup(self, another=False):
@@ -412,8 +482,21 @@ class App:
             "modules": modules, "matrix": matrix, "mistakes": mistakes,
             "setup": {"statements_have": self._statements_have(),
                       "statements_total": len(self.catalog.problems()),
-                      "claude": coach.available(self.coach_cmd)},
+                      "claude": self._coach_ready(), "coach": self._coach_info()},
+            "onboarding": self._onboarding(),
             "notices": self.notices()})
+
+    def _onboarding(self):
+        """The first steps ticked in the plan, for the Home checklist."""
+        steps = notes.plan_steps(self.paths)
+        return {"discovery": steps["discovery"],
+                "discovery_started": steps["discovery"] or notes.profile_started(self.paths)
+                or bool(self.store.setup("chat").get("messages")),
+                "self_check": steps["self_check"],
+                "diagnostic": steps["diagnostic"],
+                "diagnostic_started": steps["diagnostic"]
+                or bool(self.store.setup("diagnostic").get("answers")),
+                "scored": steps["scored"]}
 
     def warmup_another(self, query, data):
         return json_response(200, {"warmup": self._warmup(another=True)})
@@ -422,6 +505,7 @@ class App:
 
     def problems(self, query, data):
         state = self.store.snapshot().get("problems") or {}
+        starred = self.store.starred()
         titles = self._titles()
         out = []
         for p in self.catalog.problems():
@@ -429,7 +513,8 @@ class App:
             row = {k: p.get(k) for k in ("slug", "number", "title", "difficulty", "module",
                                          "category", "url", "premium")}
             row.update(status=entry.get("status", "new"), seconds=entry.get("seconds", 0),
-                       solved_at=entry.get("solved_at"), last_at=self._last_at(p["slug"], entry))
+                       solved_at=entry.get("solved_at"), last_at=self._last_at(p["slug"], entry),
+                       starred=p["slug"] in starred)
             out.append(row)
         return json_response(200, {"problems": out,
                                    "modules": [{"id": mid, "title": titles[mid]}
@@ -463,23 +548,26 @@ class App:
                    notes=entry["notes"], chat=entry["chat"], examples=self.catalog.examples(slug),
                    statement=self._statement(slug), attempt=entry["attempt"],
                    solved_at=entry["solved_at"], first_try=entry["first_try"],
-                   rev=self.store.rev(slug))
+                   rev=self.store.rev(slug), starred=slug in self.store.starred(),
+                   tabs=self._tabs(slug, p), history=self.store.history(slug))
         return json_response(200, out)
 
     def draft(self, slug, query, data):
         p = self._problem(slug)
         code = self._code(data, required=False)
+        codes = self._codes(data)
         notes_in = self._notes(data)
-        self._save_changed(slug, p, code, notes_in, self._base_rev(data))
+        self._save_changed(slug, p, code, notes_in, self._base_rev(data), codes=codes)
         return json_response(200, {"ok": True, "rev": self.store.rev(slug)})
 
     def run(self, slug, query, data):
         p = self._problem(slug)
         code = self._code(data, required=True)
-        self._save_changed(slug, p, code, None, self._base_rev(data))
+        tab = self._tab(slug, data)
+        self._save_changed(slug, p, code, None, self._base_rev(data), tab, self._codes(data))
         result = runner.run(self.catalog.spec(slug), code, examples_only=True)
         self.store.record_run(slug)
-        self.last_results[slug] = self._summary("run", result)
+        self.last_results[slug] = dict(self._summary("run", result), tab=tab)
         out = dict(result)
         out["rev"] = self.store.rev(slug)
         return json_response(200, out)
@@ -490,23 +578,27 @@ class App:
         notes_in = self._notes(data)
         base_rev = self._base_rev(data)
         elapsed = self._elapsed(data)
+        tab = self._tab(slug, data)
+        codes = self._codes(data)
         with self.lock:
-            self._save_changed(slug, p, code, notes_in, base_rev)
+            self._save_changed(slug, p, code, notes_in, base_rev, tab, codes)
             if elapsed:
                 self.store.add_seconds(slug, elapsed)
         result = runner.run(self.catalog.spec(slug), code, examples_only=False)
         with self.lock:
-            record = self.store.record_submit(slug, result.get("passed", 0), result.get("total", 0))
+            record = self.store.record_submit(slug, result.get("passed", 0), result.get("total", 0),
+                                              code=code, tab=tab, skeleton=p.get("skeleton", ""))
             entry = self.store.problem(slug)
             same = [s for s in entry["submits"] if s.get("attempt", 1) == record["attempt"]]
             ids = [s.get("id") for s in same]
             n = ids.index(record["id"]) + 1 if record["id"] in ids else len(same)
             first_try = bool(record["ok"]) and n == 1
             matrix = self._update_matrix(p, entry, record, n)
-        self.last_results[slug] = self._summary("submit", result)
+        self.last_results[slug] = dict(self._summary("submit", result), tab=tab,
+                                       submit_id=record["id"])
         out = dict(result)
         out.update(solved=bool(record["ok"]), first_try=first_try, submit_id=record["id"],
-                   matrix=matrix, rev=self.store.rev(slug))
+                   matrix=matrix, rev=self.store.rev(slug), history=self.store.history(slug))
         return json_response(200, out)
 
     @staticmethod
@@ -564,9 +656,11 @@ class App:
 
     def reset(self, slug, query, data):
         p = self._problem(slug)
+        tab = self._tab(slug, data)
         with self.lock:
-            self.store.reset_code(slug, p.get("skeleton", ""))
-        return json_response(200, {"code": p.get("skeleton", ""), "rev": self.store.rev(slug)})
+            self.store.reset_code(slug, p.get("skeleton", ""), tab)
+        return json_response(200, {"code": p.get("skeleton", ""), "rev": self.store.rev(slug),
+                                   "history": self.store.history(slug)})
 
     def redo(self, slug, query, data):
         p = self._problem(slug)
@@ -574,10 +668,72 @@ class App:
             if self.store.problem(slug)["status"] != "solved":
                 raise ApiError(409, "not_solved", "Redo starts a new attempt of a solved problem; "
                                "this one is not solved yet.")
-            attempt = self.store.redo(slug)
+            attempt = self.store.redo(slug, p.get("skeleton", ""))
         self.last_results.pop(slug, None)
         return json_response(200, {"code": p.get("skeleton", ""), "attempt": attempt,
                                    "rev": self.store.rev(slug)})
+
+    # ---- editor tabs and the history of a problem's code -------------------
+
+    def tab_add(self, slug, query, data):
+        """Open one more editor tab: empty (the skeleton), or with the code of a history entry."""
+        p = self._problem(slug)
+        name = data.get("name")
+        if name is not None and not isinstance(name, str):
+            raise bad("name must be a string.")
+        source = data.get("from_history")
+        if source is not None and (isinstance(source, bool) or not isinstance(source, int)):
+            raise bad("from_history must be the id of a history entry.")
+        with self.lock:
+            self._check_rev(slug, self._base_rev(data))
+            code = None
+            if source is not None:
+                code = self.store.history_code(slug, source)
+                if code is None:
+                    raise ApiError(404, "not_found", "That earlier version is no longer there.")
+            try:
+                tab = self.store.add_tab(slug, name, code)
+            except TabError as exc:
+                raise self._tab_error(exc)
+        tab["code"] = code if code is not None else p.get("skeleton", "")
+        return json_response(200, {"tab": tab, "rev": self.store.rev(slug)})
+
+    def tab_rename(self, slug, query, data):
+        self._problem(slug)
+        name = data.get("name")
+        if not isinstance(name, str) or not name.strip():
+            raise bad("The body needs the new name.")
+        tab = self._tab(slug, data)
+        with self.lock:
+            self._check_rev(slug, self._base_rev(data))
+            try:
+                out = self.store.rename_tab(slug, tab, name)
+            except TabError as exc:
+                raise self._tab_error(exc)
+        return json_response(200, {"tab": out, "rev": self.store.rev(slug)})
+
+    def tab_close(self, slug, query, data):
+        """Close an extra tab. Its code is kept in the history."""
+        p = self._problem(slug)
+        tab = self._tab(slug, data)
+        with self.lock:
+            self._check_rev(slug, self._base_rev(data))
+            try:
+                self.store.close_tab(slug, tab, p.get("skeleton", ""))
+            except TabError as exc:
+                raise self._tab_error(exc)
+            results = self.last_results.get(slug)
+            if results and results.get("tab", MAIN_TAB) == tab:
+                self.last_results.pop(slug, None)
+        return json_response(200, {"ok": True, "rev": self.store.rev(slug),
+                                   "history": self.store.history(slug)})
+
+    def history_code(self, slug, hid, query, data):
+        self._problem(slug)
+        code = self.store.history_code(slug, int(hid))
+        if code is None:
+            raise ApiError(404, "not_found", "That earlier version is no longer there.")
+        return json_response(200, {"id": int(hid), "code": code})
 
     def heartbeat(self, query, data):
         slug = data.get("slug")
@@ -609,9 +765,10 @@ class App:
             raise bad("Type a question first.")
         code = self._code(data, required=False)
         notes_in = self._notes(data)
-        self._save_changed(slug, p, code, notes_in)
+        tab = self._tab(slug, data)
+        self._save_changed(slug, p, code, notes_in, tab=tab, codes=self._codes(data))
         entry = self.store.problem(slug)
-        context = self._context(slug, p, entry, code, message)
+        context = self._context(slug, p, entry, code, message, tab)
         if not self.coach_slot.acquire(blocking=False):
             raise ApiError(409, "busy", BUSY_DETAIL)
         cancel = threading.Event()
@@ -626,7 +783,9 @@ class App:
 
     def _coach_stream(self, slug, kind, context, user_text, cancel):
         """The user turn and the reply are stored together, and only after `done`."""
-        events = coach.ask(kind, context, cmd=self.coach_cmd, idle=self.coach_idle, cancel=cancel)
+        provider = self._coach_active() or "claude"
+        events = coach.ask(kind, context, cmd=self._coach_cmd(provider), idle=self.coach_idle,
+                           cancel=cancel, provider=provider)
         try:
             yield b": open\n\n"
             for ev in events:
@@ -668,13 +827,24 @@ class App:
             self.reviewing.add(key)
         try:
             entry = self.store.problem(slug)
-            context = self._context(slug, p, entry)
-            if not context["results"] or context["results"].get("kind") != "submit":
+            # the review is of the code that was submitted, whatever the tabs hold by now
+            submitted = None
+            if record.get("history") is not None:
+                try:
+                    submitted = self.store.history_code(slug, record["history"])
+                except ValueError:
+                    submitted = None
+            context = self._context(slug, p, entry, submitted)
+            last = self.last_results.get(slug)
+            context["results"] = last if last and last.get("kind") == "submit" \
+                and last.get("submit_id", submit_id) == submit_id else None
+            if not context["results"]:
                 context["results"] = {"kind": "submit", "passed": record["passed"],
                                       "total": record["total"], "fatal": None, "failing": []}
             context["learnings"] = [e["title"] for e in notes.recent_learnings(self.paths, 50)]
             context["bug_log"] = notes.bug_log(self.paths)
-            review = coach.final_review(context, cmd=self.coach_cmd)
+            provider = self._coach_active() or "claude"
+            review = coach.final_review(context, cmd=self._coach_cmd(provider), provider=provider)
             if "error" in review:
                 status = 503 if review["error"] == "claude_not_found" else 502
                 raise ApiError(status, review["error"], review.get("detail") or "The coach failed.")
@@ -704,6 +874,265 @@ class App:
             with self.lock:
                 self.reviewing.discard(key)
                 self.coach_slot.release()
+
+    # ---- first steps, in the app ----------------------------------------
+
+    def _setup_text(self, data, key, limit=MAX_CODE, required=False):
+        value = data.get(key)
+        if value is None and not required:
+            return ""
+        if not isinstance(value, str):
+            raise bad("%s must be a string." % key)
+        if len(value) > limit:
+            raise ApiError(413, "too_large", "The %s is too long." % key)
+        return value
+
+    def _setup_structured(self, prompt, schema, what):
+        """One JSON answer from the coach, holding the coach slot only while it runs."""
+        if not self.coach_slot.acquire(blocking=False):
+            raise ApiError(409, "busy", BUSY_DETAIL)
+        try:
+            provider = self._coach_active() or "claude"
+            out = coach.structured(prompt, schema, system=onboard.FILL_SYSTEM,
+                                   cmd=self._coach_cmd(provider), provider=provider, what=what)
+        finally:
+            self.coach_slot.release()
+        if "error" in out:
+            status = 503 if out["error"] == "claude_not_found" else 502
+            raise ApiError(status, out["error"], out.get("detail") or "The coach failed.")
+        return out
+
+    def discovery(self, query, data):
+        messages = self.store.setup("chat").get("messages") or []
+        done = notes.plan_steps(self.paths)["discovery"]
+        return json_response(200, {"messages": messages, "done": done,
+                                   "started": bool(messages) or notes.profile_started(self.paths)})
+
+    def discovery_chat(self, query, data):
+        message = self._setup_text(data, "message").strip()
+        history = self.store.setup("chat").get("messages") or []
+        if history and not message:
+            raise bad("Type an answer first.")
+        convo = history + ([{"role": "user", "text": message}] if message else [])
+        prompt = onboard.chat_prompt(convo, self._today())
+        if not self.coach_slot.acquire(blocking=False):
+            raise ApiError(409, "busy", BUSY_DETAIL)
+        cancel = threading.Event()
+        try:
+            gen = self._discovery_stream(prompt, message, cancel)
+        except BaseException:
+            self.coach_slot.release()
+            raise
+        return Response(200, {"Content-Type": "text/event-stream; charset=utf-8"},
+                        stream=_Stream(gen, self.coach_slot.release), cancel=cancel)
+
+    def _discovery_stream(self, prompt, message, cancel):
+        provider = self._coach_active() or "claude"
+        events = coach.ask(None, None, cmd=self._coach_cmd(provider), idle=self.coach_idle,
+                           cancel=cancel, provider=provider, prompt=prompt,
+                           system=onboard.CHAT_SYSTEM)
+        try:
+            yield b": open\n\n"
+            for ev in events:
+                if ev.get("idle"):
+                    yield b": ping\n\n"
+                    continue
+                if ev.get("done"):
+                    at = self.store.stamp()
+
+                    def add(value, text=ev["text"]):
+                        msgs = value.setdefault("messages", [])
+                        if message:
+                            msgs.append({"role": "user", "text": message, "at": at})
+                        msgs.append({"role": "coach", "text": text, "at": at})
+                    self.store.update_setup("chat", add)
+                yield _sse(ev)
+                if "done" in ev or "error" in ev:
+                    return
+        except Exception as exc:
+            try:
+                self.log.write(traceback.format_exc())
+                self.log.flush()
+            except Exception:
+                pass
+            yield _sse({"error": "internal", "detail": "%s: %s" % (type(exc).__name__, exc)})
+        finally:
+            events.close()
+
+    def discovery_reset(self, query, data):
+        self.store.update_setup("chat", lambda value: value.update(messages=[]))
+        return json_response(200, {"ok": True})
+
+    def discovery_finish(self, query, data):
+        messages = self.store.setup("chat").get("messages") or []
+        if not any(m.get("role") == "user" for m in messages):
+            raise bad("Answer the coach's questions first.")
+        today = self._today()
+        raw = self._setup_structured(onboard.discovery_prompt(self.paths, messages, today),
+                                     onboard.DISCOVERY_SCHEMA, "discovery notes")
+        answer = onboard.normalise_discovery(raw, self.paths)
+        if answer is None:
+            raise ApiError(502, "bad_answer", "The coach's answer had no profile. Try again.")
+        report = onboard.write_discovery(self.paths, answer, today)
+        self.store.update_setup("chat", lambda value: value.update(finished=self.store.stamp()))
+        return json_response(200, {"saved": report, "answer": answer,
+                                   "onboarding": self._onboarding()})
+
+    def _selfcheck_view(self):
+        items = onboard.self_check(self.paths)
+        state = self.store.setup("selfcheck")
+        result = state.get("result")
+        out = []
+        for it in items:
+            row = {"n": it["n"], "question": it["question"]}
+            if result:
+                row["answer"] = it["answer"]
+                mark = next((m for m in result["marks"] if m["n"] == it["n"]), None)
+                row["mark"] = mark
+            out.append(row)
+        return {"items": out, "answers": state.get("answers") or {}, "result": result,
+                "done": notes.plan_steps(self.paths)["self_check"]}
+
+    def _selfcheck_answers(self, data, items):
+        answers = data.get("answers")
+        if not isinstance(answers, dict):
+            raise bad("answers must be an object of question number to text.")
+        valid = {str(it["n"]) for it in items}
+        out = {}
+        for k, v in answers.items():
+            if k in valid:
+                if not isinstance(v, str):
+                    raise bad("Each answer must be a string.")
+                out[k] = v[:20000]
+        return out
+
+    def selfcheck(self, query, data):
+        return json_response(200, self._selfcheck_view())
+
+    def selfcheck_save(self, query, data):
+        answers = self._selfcheck_answers(data, onboard.self_check(self.paths))
+        self.store.update_setup("selfcheck", lambda value: value.update(answers=answers))
+        return json_response(200, {"ok": True})
+
+    def selfcheck_mark(self, query, data):
+        items = onboard.self_check(self.paths)
+        if not items:
+            raise ApiError(404, "not_found", "Module 00 has no self-check section.")
+        answers = self._selfcheck_answers(data, items)
+        if not any(v.strip() for v in answers.values()):
+            raise bad("Answer at least one question first.")
+        self.store.update_setup("selfcheck", lambda value: value.update(answers=answers))
+        raw = self._setup_structured(onboard.selfcheck_prompt(items, answers),
+                                     onboard.SELFCHECK_SCHEMA, "marking")
+        result = onboard.normalise_selfcheck(raw, items)
+        if result is None:
+            raise ApiError(502, "bad_answer", "The coach's answer had no marks. Try again.")
+        report = onboard.write_selfcheck(self.paths, result)
+        self.store.set_module_read("00", True)
+        summary = onboard.selfcheck_summary(result["marks"])
+        stored = dict(result, summary=summary, at=self.store.stamp())
+        self.store.update_setup("selfcheck", lambda value: value.update(result=stored))
+        view = self._selfcheck_view()
+        view.update(saved=report, onboarding=self._onboarding())
+        return json_response(200, view)
+
+    def _diag_problems(self):
+        """The diagnostic's problems with their statements and the saved answers."""
+        parsed = onboard.diagnostic(self.paths)
+        answers = self.store.setup("diagnostic").get("answers") or {}
+        out = []
+        for p in parsed["problems"]:
+            row = dict(p)
+            try:
+                kit = self.catalog.get(p["slug"])
+            except KeyError:
+                kit = None
+            row["in_kit"] = kit is not None
+            row["skeleton"] = kit.get("skeleton", "") if kit else ""
+            row["statement"] = self._statement(p["slug"]) if kit else None
+            saved = answers.get(p["slug"]) or {}
+            row["code"] = saved.get("code") if isinstance(saved.get("code"), str) \
+                else row["skeleton"]
+            row["seconds"] = saved.get("seconds") or 0
+            row["notes"] = saved.get("notes") or ""
+            row["finished"] = bool(saved.get("finished"))
+            out.append(row)
+        return out, parsed["rules"]
+
+    def diagnostic(self, query, data):
+        problems, rules = self._diag_problems()
+        state = self.store.setup("diagnostic")
+        return json_response(200, {
+            "problems": problems, "rules": rules,
+            "overall_questions": [{"key": k, "question": q} for k, q in onboard.OVERALL_QUESTIONS],
+            "overall": state.get("overall") or {}, "review": state.get("review"),
+            "done": notes.plan_steps(self.paths)["diagnostic"]})
+
+    def diagnostic_answer(self, query, data):
+        slug = data.get("slug")
+        overall = data.get("overall")
+        if overall is not None:
+            if not isinstance(overall, dict):
+                raise bad("overall must be an object.")
+            keys = {k for k, _ in onboard.OVERALL_QUESTIONS}
+            clean = {k: v[:20000] for k, v in overall.items() if k in keys and isinstance(v, str)}
+            self.store.update_setup("diagnostic", lambda value: value.update(overall=clean))
+            return json_response(200, {"ok": True})
+        problems, _ = self._diag_problems()
+        if slug not in {p["slug"] for p in problems}:
+            raise bad("slug must be one of the diagnostic's problems.")
+        code = self._setup_text(data, "code")
+        notes_text = self._setup_text(data, "notes", limit=20000)
+        seconds = data.get("seconds")
+        if not isinstance(seconds, int) or isinstance(seconds, bool) or seconds < 0:
+            raise bad("seconds must be a whole number of seconds.")
+
+        def put(value):
+            answers = value.setdefault("answers", {})
+            old = answers.get(slug) or {}
+            answers[slug] = {"code": code, "notes": notes_text,
+                             "seconds": min(max(seconds, old.get("seconds") or 0), 6 * 3600),
+                             "finished": bool(data.get("finished")) or bool(old.get("finished"))}
+        self.store.update_setup("diagnostic", put)
+        return json_response(200, {"ok": True})
+
+    def diagnostic_finish(self, query, data):
+        state = self.store.setup("diagnostic")
+        if state.get("review"):
+            raise ApiError(409, "already_scored", "The diagnostic is already scored.")
+        problems, _ = self._diag_problems()
+        if not problems:
+            raise ApiError(404, "not_found", "course/diagnostic.md lists no problems.")
+        answers = state.get("answers") or {}
+        if not any((answers.get(p["slug"]) or {}).get("code", "").strip() for p in problems):
+            raise bad("Write at least one answer first.")
+        for p in problems:
+            if not p["in_kit"]:
+                p["result_line"], p["first_failing"] = "not in the kit's catalog", "-"
+                continue
+            try:
+                result = runner.run(self.catalog.spec(p["slug"]), p["code"])
+            except (OSError, ValueError):
+                result = {"fatal": {"type": "the kit has no tests for it"}}
+            p["result_line"], p["first_failing"] = onboard.result_line(result)
+        overall = state.get("overall") or {}
+        today = self._today()
+        raw = self._setup_structured(onboard.diagnostic_prompt(self.paths, problems, overall,
+                                                               today),
+                                     onboard.DIAGNOSTIC_SCHEMA, "scoring")
+        scored = onboard.normalise_diagnostic(raw, self.paths, problems)
+        if scored is None:
+            raise ApiError(502, "bad_answer", "The coach's answer had no scores. Try again.")
+        report = onboard.write_diagnostic(self.paths, problems, overall, scored, today)
+        review = {"problems": [{"slug": p["slug"], "title": p["title"],
+                                "result": p["result_line"], "first_failing": p["first_failing"],
+                                **scored["problems"].get(p["slug"], {})} for p in problems],
+                  "matrix": scored["matrix"], "known_gaps": scored["known_gaps"],
+                  "blocks": scored["blocks"], "what_next": scored["what_next"],
+                  "at": self.store.stamp()}
+        self.store.update_setup("diagnostic", lambda value: value.update(review=review))
+        return json_response(200, {"review": review, "saved": report,
+                                   "onboarding": self._onboarding()})
 
     # ---- course and notes -----------------------------------------------
 
@@ -738,6 +1167,12 @@ class App:
             raise ApiError(413, "too_large", "%s is larger than %d MB, so it is not opened here."
                            % (rel, course.MAX_DOC // (1024 * 1024)))
 
+    def star(self, slug, query, data):
+        self._problem(slug)
+        if not isinstance(data.get("starred"), bool):
+            raise bad("starred must be true or false.")
+        return json_response(200, {"ok": True, "starred": self.store.set_starred(slug, data["starred"])})
+
     def module_read(self, module_id, query, data):
         if module_id not in MODULE_IDS:
             raise ApiError(404, "not_found", "There is no module %s." % module_id)
@@ -765,13 +1200,63 @@ class App:
                               "total": len(self.catalog.problems()),
                               "running": self.statements_running,
                               "failed": list(self.statements_failed)},
-               "claude": coach.available(self.coach_cmd)}
+               "claude": self._coach_ready(), "coach": self._coach_info()}
         if self.statements_error:
             out["statements"]["error"] = self.statements_error
         err = getattr(self.store, "save_error", None)
         if err:
             out["save_error"] = err
         return json_response(200, out)
+
+    # ---- which coach ------------------------------------------------------
+
+    def _coach_cmd(self, provider):
+        return self.codex_cmd if provider == "codex" else self.coach_cmd
+
+    def _coach_found(self, provider):
+        return coach.available(self._coach_cmd(provider), provider)
+
+    def _coach_active(self):
+        """The provider the coach runs through, or None. With nothing chosen yet it is Claude
+        Code when that is installed, as it was before there was a choice."""
+        choice = settings.coach_choice(self.paths)
+        if choice in coach.PROVIDERS:
+            return choice
+        if choice is None and self._coach_found("claude"):
+            return "claude"
+        return None
+
+    def _coach_ready(self):
+        """True when there is a coach and its command-line tool is on this computer."""
+        active = self._coach_active()
+        return bool(active) and self._coach_found(active)
+
+    def _coach_info(self):
+        providers = []
+        for key in coach.PROVIDER_ORDER:
+            spec = coach.PROVIDERS[key]
+            providers.append({"key": key, "label": spec["label"], "command": spec["exe"],
+                              "found": self._coach_found(key), "install_url": spec["install_url"]})
+        return {"choice": settings.coach_choice(self.paths), "active": self._coach_active(),
+                "providers": providers}
+
+    def setup_coach(self, query, data):
+        return json_response(200, self._coach_info())
+
+    def setup_coach_set(self, query, data):
+        provider = data.get("provider") if isinstance(data, dict) else None
+        if provider not in settings.COACH_CHOICES:
+            raise bad("provider must be one of %s." % ", ".join(settings.COACH_CHOICES))
+        if provider in coach.PROVIDERS and not self._coach_found(provider):
+            raise ApiError(409, "coach_not_found", "%s was not found on this computer."
+                           % coach.PROVIDERS[provider]["label"])
+        try:
+            with self.lock:
+                settings.set_coach_choice(self.paths, provider)
+        except OSError as exc:
+            raise ApiError(500, "write_failed", "Could not save the choice: %s."
+                           % (exc.strerror or exc))
+        return json_response(200, self._coach_info())
 
     def setup_statements(self, query, data):
         with self.lock:

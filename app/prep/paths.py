@@ -16,6 +16,7 @@ class Paths:
         self.templates = os.path.join(self.course, "templates")
         self.my_prep = os.path.join(self.root, "my-prep")
         self.state_file = os.path.join(self.my_prep, "app", "state.json")
+        self.settings_file = os.path.join(self.my_prep, "app", "settings.json")
         self.solutions_dir = os.path.join(self.my_prep, "solutions")
 
     def __repr__(self):

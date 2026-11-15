@@ -317,7 +317,8 @@ export function attachTooltip(target, content) {
     const { value, label } = content();
     const tip = tipBox();
     clear(tip);
-    tip.append(h("strong", null, value), label ? h("span", null, label) : null);
+    tip.append(h("strong", null, value));
+    if (label) tip.append(h("span", null, label));
     tip.hidden = false;
     const r = target.getBoundingClientRect();
     const t = tip.getBoundingClientRect();

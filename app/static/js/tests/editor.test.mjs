@@ -1,7 +1,7 @@
 // Pure helpers of the editor module. Run with: node --test "app/static/js/tests/*.test.mjs"
 import test from "node:test";
 import assert from "node:assert/strict";
-import { keyLabels, isMacPlatform, clampLine } from "../editor.js";
+import { keyLabels, isMacPlatform, clampLine, indentBackspace } from "../editor.js";
 
 test("keyLabels uses the Command sign on a Mac and Ctrl elsewhere", () => {
   assert.deepEqual(keyLabels(true), { run: "⌘↩", save: "⌘S", comment: "⌘/" });
@@ -25,4 +25,27 @@ test("clampLine turns a 1-based user line into a 0-based editor line, or null", 
   assert.equal(clampLine(null, 10), null);
   assert.equal(clampLine("3", 10), 2);
   assert.equal(clampLine(2.5, 10), null);
+});
+
+test("indentBackspace removes a whole indent step inside the indentation", () => {
+  assert.equal(indentBackspace("    "), 4);
+  assert.equal(indentBackspace("        "), 4);
+  assert.equal(indentBackspace("            ", 4), 4);
+});
+
+test("indentBackspace goes back to the previous indent stop from an uneven column", () => {
+  assert.equal(indentBackspace(" "), 1);
+  assert.equal(indentBackspace("  "), 2);
+  assert.equal(indentBackspace("     "), 1);
+  assert.equal(indentBackspace("       "), 3);
+  assert.equal(indentBackspace("   ", 2), 1);
+});
+
+test("indentBackspace leaves everything else to the editor", () => {
+  assert.equal(indentBackspace(""), 0);
+  assert.equal(indentBackspace("    x"), 0);
+  assert.equal(indentBackspace("x = 1    "), 0);
+  assert.equal(indentBackspace("\t"), 0);
+  assert.equal(indentBackspace(undefined), 0);
+  assert.equal(indentBackspace("    ", 0), 0);
 });

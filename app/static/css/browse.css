@@ -53,12 +53,39 @@
 .browse-table td a:not(.btn) { color: var(--text); text-decoration: none; }
 .browse-table td a:not(.btn):hover { text-decoration: underline; }
 .browse-table td a.btn { text-decoration: none; }
+.browse-table .td-star { width: 36px; padding-right: 0; }
+/* Fixed widths so Level and Status line up from one module card to the next. */
+.browse-table .td-id { width: 44px; }
+.browse-table .td-level { width: 120px; }
+.browse-table .td-status { width: 200px; white-space: nowrap; }
 .td-title { overflow-wrap: anywhere; }
 .td-title .tag { margin-left: 8px; }
 .tag-premium { color: var(--text-2); background: var(--track); }
 
 /* ---- review hub ----------------------------------------------------------------------- */
-.review-links { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 22px; font-size: 14px; }
+.review-links {
+  list-style: none; margin: 0; padding: 0; display: grid; gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+/* Four notes sit on one row; six fall into two rows of three. */
+.review-links[data-n="4"] { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); }
+.review-links li { display: flex; }
+.note-tile {
+  flex: 1; display: flex; flex-direction: column; gap: 4px; padding: 11px 13px; border: 1px solid var(--line);
+  border-radius: 10px; background: var(--page); color: var(--text); text-decoration: none;
+  transition: border-color .12s, background .12s;
+}
+.note-tile:hover { border-color: var(--accent); background: var(--accent-soft); }
+.note-tile-head { display: flex; align-items: center; gap: 8px; }
+.note-tile-name { font-weight: 600; font-size: 14.5px; }
+.note-tile-mark {
+  font-size: 11.5px; color: var(--text-3); border: 1px solid var(--line); border-radius: 999px;
+  padding: 0 7px; line-height: 18px; white-space: nowrap;
+}
+.note-tile-go { margin-left: auto; color: var(--text-3); transition: transform .12s, color .12s; }
+.note-tile:hover .note-tile-go { color: var(--accent); transform: translateX(2px); }
+.note-tile-desc { font-size: 13px; line-height: 1.4; color: var(--text-2); }
+@media (prefers-reduced-motion: reduce) { .note-tile, .note-tile-go { transition: none; } }
 .mx-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 
 .mx-card { overflow: hidden; }

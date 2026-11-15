@@ -3,7 +3,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   cleanNeetcode, fmtClock, fmtMs, caseRow, caseFields, errorText, resultSummary,
-  historyItems, unreviewedSubmit, scratchKey, nextSaveState, createSaver, saveLabel,
+  historyItems, unreviewedSubmit, scratchKey, reviewFlagText, nextSaveState, createSaver, saveLabel,
 } from "../practice.js";
 
 test("cleanNeetcode turns inline $…$ maths into plain text", () => {
@@ -406,4 +406,14 @@ test("createSaver (F15.5): a keepalive flush that did not leave the page marks t
   await tick(); await tick();
   assert.equal(saver.saved, "b");
   assert.equal(state.states.at(-1).dirty, false);
+});
+
+test("reviewFlagText names each state of the final review and nothing else", () => {
+  assert.match(reviewFlagText("writing"), /in progress.*Stay on this page/);
+  assert.match(reviewFlagText("done"), /ready/);
+  assert.match(reviewFlagText("failed"), /No final review/);
+  assert.match(reviewFlagText("queued"), /starts when/);
+  assert.match(reviewFlagText("again"), /Not reviewed/);
+  assert.equal(reviewFlagText(null), null);
+  assert.equal(reviewFlagText("other"), null);
 });

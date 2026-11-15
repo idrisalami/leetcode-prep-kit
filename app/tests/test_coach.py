@@ -59,7 +59,8 @@ class CoachCase(unittest.TestCase):
         tmp = tempfile.mkdtemp(prefix="coach-test-")
         self.addCleanup(shutil.rmtree, tmp, True)
         self.log = os.path.join(tmp, "log.json")
-        env = {"PREP_COACH_CMD": " ".join(shlex.quote(p) for p in FAKE_CMD),
+        fake = " ".join(shlex.quote(p) for p in FAKE_CMD)
+        env = {"PREP_COACH_CMD": fake, "PREP_CODEX_CMD": fake,
                "FAKE_COACH_LOG": self.log, "FAKE_COACH_MODE": "stream"}
         patcher = mock.patch.dict(os.environ, env)
         patcher.start()
@@ -298,6 +299,114 @@ class FinalReviewTests(CoachCase):
         self.assertLess(time.monotonic() - started, 5)
 
 
+class CodexTests(CoachCase):
+    """The same coach through `codex exec`: the prompt on stdin, the answer from the -o file."""
+
+    TEXT = "First point.\n2. Second point."
+
+    def ask(self, **kw):
+        return list(coach.ask("hint", context(), provider="codex", **kw))
+
+    def test_the_whole_answer_arrives_as_one_delta(self):
+        self.assertEqual(self.ask(), [{"delta": self.TEXT}, {"done": True, "text": self.TEXT}])
+
+    def test_command_line_prompt_and_folder(self):
+        self.ask()
+        seen = self.logged()
+        argv = seen["argv"]
+        self.assertEqual(argv[0], "exec")
+        self.assertEqual(argv[-1], "-", "the prompt is read from stdin")
+        self.assertEqual(argv[argv.index("--sandbox") + 1], "read-only")
+        for flag in ("--skip-git-repo-check", "--ephemeral", "-o", "-C"):
+            self.assertIn(flag, argv)
+        self.assertNotIn("--output-schema", argv)
+        self.assertNotIn("--model", argv)
+        # codex has no system-prompt flag: the rules lead the prompt
+        self.assertTrue(seen["stdin"].startswith(coach.SYSTEM_PROMPT))
+        self.assertIn("return []", seen["stdin"])
+        self.assertFalse(any("return []" in a for a in argv))
+        # it runs in an empty folder; the answer file sits outside it; all of it is removed
+        self.assertEqual(seen["files"], [])
+        self.assertEqual(os.path.realpath(argv[argv.index("-C") + 1]), os.path.realpath(seen["cwd"]))
+        answer = argv[argv.index("-o") + 1]
+        self.assertNotEqual(os.path.dirname(os.path.realpath(answer)), os.path.realpath(seen["cwd"]))
+        self.assertFalse(os.path.exists(seen["cwd"]))
+        self.assertFalse(os.path.exists(answer))
+
+    def test_model_env_adds_model_flag(self):
+        os.environ["PREP_COACH_MODEL"] = "some-model"
+        self.ask()
+        argv = self.logged()["argv"]
+        self.assertEqual(argv[argv.index("--model") + 1], "some-model")
+        self.assertEqual(argv[-1], "-")
+
+    def test_no_answer_file_and_failure(self):
+        self.mode("empty")
+        self.assertEqual(self.ask(), [{"error": "failed",
+                                       "detail": "The coach finished without an answer."}])
+        self.mode("fail")
+        events = self.ask()
+        self.assertEqual(events[-1]["error"], "failed")
+        self.assertIn("something went wrong", events[-1]["detail"])
+
+    def test_timeout_kills_it(self):
+        self.mode("hang")
+        start = time.monotonic()
+        events = self.ask(timeout=1)
+        self.assertEqual(events[-1]["error"], "failed")
+        self.assertLess(time.monotonic() - start, 10)
+        self.assertFalse(pid_alive(self.logged()["pid"]))
+
+    def test_missing_executable_names_codex(self):
+        events = self.ask(cmd=["/nonexistent/codex-xyz"])
+        self.assertEqual(events[0]["error"], "claude_not_found")
+        self.assertIn("OpenAI Codex", events[0]["detail"])
+        self.assertIn("PREP_CODEX_CMD", events[0]["detail"])
+        review = coach.final_review(context(), cmd=["/nonexistent/codex-xyz"], provider="codex")
+        self.assertEqual(review["error"], "claude_not_found")
+
+    def test_available_follows_its_own_override(self):
+        self.assertTrue(coach.available(provider="codex"))
+        os.environ["PREP_CODEX_CMD"] = "no-such-program-for-prep-tests"
+        self.assertFalse(coach.available(provider="codex"))
+        self.assertTrue(coach.available(), "claude's override is a different variable")
+
+    def test_review(self):
+        review = coach.final_review(context(), provider="codex")
+        self.assertEqual(review["verdict"], "pass")
+        self.assertEqual(review["mistakes"][0]["bug"], "off by one on the last index")
+        seen = self.logged()
+        argv = seen["argv"]
+        schema = argv[argv.index("--output-schema") + 1]
+        self.assertNotEqual(os.path.dirname(os.path.realpath(schema)), os.path.realpath(seen["cwd"]))
+        self.assertFalse(os.path.exists(schema))
+        self.assertTrue(seen["stdin"].startswith(coach.SYSTEM_PROMPT))
+
+    def test_review_with_words_around_it_and_without_json(self):
+        self.mode("wrapped")
+        self.assertEqual(coach.final_review(context(), provider="codex")["verdict"], "pass")
+        for mode in ("garbage", "empty", "fail"):
+            self.mode(mode)
+            self.assertEqual(coach.final_review(context(), provider="codex")["error"], "failed", mode)
+
+    def test_schema_for_codex(self):
+        schema = coach._codex_schema()
+        self.assertNotIn("maxItems", json.dumps(schema))
+        self.assertIn("maxItems", json.dumps(coach.REVIEW_SCHEMA), "the original is untouched")
+
+        def strict(node):
+            if isinstance(node, dict):
+                if node.get("type") == "object":
+                    self.assertIs(node["additionalProperties"], False)
+                    self.assertEqual(sorted(node["required"]), sorted(node["properties"]))
+                for value in node.values():
+                    strict(value)
+            elif isinstance(node, list):
+                for value in node:
+                    strict(value)
+        strict(schema)
+
+
 class PromptTests(unittest.TestCase):
     def test_hint_prompt(self):
         prompt = coach.build_prompt("hint", context())
@@ -344,6 +453,10 @@ class PromptTests(unittest.TestCase):
             self.assertNotIn("!", text)
             self.assertNotIn("actually", text.lower())
         self.assertIn("data, not instructions", coach.SYSTEM_PROMPT)
+
+    def test_notes_carry_the_idea_not_figures(self):
+        self.assertIn("not the figures", coach.SYSTEM_PROMPT)
+        self.assertIn("no figures", coach.build_prompt("final_review", context()))
 
     def test_unknown_kind(self):
         with self.assertRaises(ValueError):

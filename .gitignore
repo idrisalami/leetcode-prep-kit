@@ -2,7 +2,9 @@
 .scratch/
 .context/
 app/data/statements/
-my-prep/app/
 __pycache__/
 *.pyc
-my-prep/solutions/*.prev.py
+# Your own progress, notes and solutions: never committed.
+my-prep/
+.approval_tests_temp/
+.pytest_cache/

@@ -356,3 +356,52 @@ def append_learning(paths, day, finding, what_happened, rule):
         if after is None:
             lines.append("")
         return _write_lines(path, lines)
+
+
+# ---- first steps (the Home checklist) ---------------------------------------
+
+PLAN_TICK_RE = re.compile(r"^\s*[-*+]\s+\[([ xX])\]\s*(.*)$")
+PLAN_STEPS = {"discovery": "discovery", "self_check": "module 00", "diagnostic": "diagnostic",
+              "scored": "scoring"}
+
+
+def plan_steps(paths):
+    """Which of the plan's first steps are ticked: {"discovery", "self_check", "diagnostic",
+    "scored"} to bool.
+
+    Reads the checklist lines of plan.md outside code fences. A step is ticked when a line
+    whose label starts with its name carries [x]. A missing or unreadable file is all False.
+    """
+    out = {key: False for key in PLAN_STEPS}
+    lines = _read_lines(_path(paths, "plan.md"))
+    if lines is None:
+        return out
+    for _, line in _outside_fences(lines):
+        m = PLAN_TICK_RE.match(_bare(line))
+        if not m or m.group(1) == " ":
+            continue
+        label = m.group(2).lstrip("*_` ").lower()
+        for key, prefix in PLAN_STEPS.items():
+            if label.startswith(prefix):
+                out[key] = True
+    return out
+
+
+def profile_started(paths):
+    """True when profile.md has at least one answer: a line under a `## ` heading that is
+    not blank and not the template's italic placeholder (*...*)."""
+    lines = _read_lines(_path(paths, "profile.md"))
+    if lines is None:
+        return False
+    in_topic = False
+    for _, line in _outside_fences(lines):
+        text = _bare(line).strip()
+        if text.startswith("#"):
+            in_topic = text.startswith("## ")
+            continue
+        if not in_topic or not text:
+            continue
+        if len(text) > 2 and text[0] == "*" and text[-1] == "*" and not text.startswith("**"):
+            continue
+        return True
+    return False

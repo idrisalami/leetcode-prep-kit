@@ -7,6 +7,7 @@ import {
   pickContinue, touchTimes, actionFor, nextUpModule,
 } from "../problems.js";
 import { redoFailure } from "../redo.js";
+import { starFailure } from "../star.js";
 
 const MODULES = [{ id: "01", title: "Arrays and hashing" }, { id: "02", title: "Stacks" },
   { id: "03", title: "Two pointers" }];
@@ -24,18 +25,29 @@ const LIST = [
 ];
 
 test("normalizeFilters keeps known values and falls back to all", () => {
-  assert.deepEqual(normalizeFilters({}, ["01", "02"]), { status: "all", difficulty: "all", module: "all" });
+  assert.deepEqual(normalizeFilters({}, ["01", "02"]),
+    { status: "all", difficulty: "all", module: "all", starred: "all" });
   assert.deepEqual(normalizeFilters({ status: "solved", difficulty: "Hard", module: "02" }, ["01", "02"]),
-    { status: "solved", difficulty: "Hard", module: "02" });
+    { status: "solved", difficulty: "Hard", module: "02", starred: "all" });
   assert.deepEqual(normalizeFilters({ status: "done", difficulty: "hard", module: "99" }, ["01"]),
-    { status: "all", difficulty: "Hard", module: "all" });
-  assert.deepEqual(normalizeFilters(null, ["01"]), { status: "all", difficulty: "all", module: "all" });
+    { status: "all", difficulty: "Hard", module: "all", starred: "all" });
+  assert.deepEqual(normalizeFilters(null, ["01"]),
+    { status: "all", difficulty: "all", module: "all", starred: "all" });
+  assert.equal(normalizeFilters({ starred: "yes" }).starred, "yes");
+  for (const odd of ["no", "true", true, 1, "", null]) {
+    assert.equal(normalizeFilters({ starred: odd }).starred, "all");
+  }
 });
 
 test("filtersToQuery leaves out defaults and keeps a fixed order", () => {
   assert.equal(filtersToQuery({ status: "all", difficulty: "all", module: "all" }), "");
   assert.equal(filtersToQuery({ module: "04", status: "attempted", difficulty: "all" }), "status=attempted&module=04");
   assert.equal(filtersToQuery({ status: "new", difficulty: "Easy", module: "all" }), "status=new&difficulty=Easy");
+  assert.equal(filtersToQuery({ status: "all", difficulty: "all", module: "all", starred: "all" }), "");
+  assert.equal(filtersToQuery({ starred: "yes", module: "04", status: "all", difficulty: "all" }),
+    "module=04&starred=yes");
+  assert.deepEqual(normalizeFilters(Object.fromEntries(new URLSearchParams("module=04&starred=yes")), ["04"]),
+    { status: "all", difficulty: "all", module: "04", starred: "yes" });
 });
 
 test("filterProblems applies all three filters and keeps the list order", () => {
@@ -44,6 +56,29 @@ test("filterProblems applies all three filters and keeps the list order", () => 
   assert.deepEqual(filterProblems(LIST, { ...all, status: "attempted" }).map((p) => p.slug), ["a2", "c1"]);
   assert.deepEqual(filterProblems(LIST, { ...all, difficulty: "Medium", module: "01" }).map((p) => p.slug), ["a2"]);
   assert.deepEqual(filterProblems(LIST, { status: "solved", difficulty: "Hard", module: "all" }), []);
+});
+
+test("the star filter keeps the starred problems and combines with the others", () => {
+  const all = { status: "all", difficulty: "all", module: "all", starred: "all" };
+  const list = LIST.map((p) => ({ ...p, starred: ["a2", "b1", "c1"].includes(p.slug) }));
+  assert.equal(filterProblems(list, all).length, 6);
+  assert.deepEqual(filterProblems(list, { ...all, starred: "yes" }).map((p) => p.slug), ["a2", "b1", "c1"]);
+  assert.deepEqual(filterProblems(list, { ...all, starred: "yes", difficulty: "Medium" }).map((p) => p.slug),
+    ["a2", "c1"]);
+  assert.deepEqual(filterProblems(LIST, { ...all, starred: "yes" }), []); // no starred field: not starred
+  const c = facetCounts(list, { ...all, starred: "yes" }, ["01", "02", "03"]);
+  assert.deepEqual(c.starred, { all: 6, yes: 3 });
+  assert.deepEqual(c.status, { all: 3, new: 1, attempted: 2, solved: 0 });
+  assert.deepEqual(c.difficulty, { all: 3, Easy: 1, Medium: 2, Hard: 0 });
+  assert.deepEqual(facetCounts(list, { ...all, module: "01" }, ["01"]).starred, { all: 3, yes: 1 });
+  const g = groupByModule(list, MODULES, { ...all, starred: "yes" });
+  assert.deepEqual(g.map((x) => [x.id, x.total, x.rows.length]), [["01", 3, 1], ["02", 2, 1], ["03", 1, 1]]);
+});
+
+test("starFailure says to restart when the server has no star route yet", () => {
+  assert.match(starFailure({ status: 404, detail: "No API route." }), /python3 app\/server\.py/);
+  assert.equal(starFailure({ status: 500, detail: "Disk full." }), "Could not save the star. Disk full.");
+  assert.equal(starFailure(new Error("network")), "Could not save the star. The app's server did not answer.");
 });
 
 test("an unknown status counts as new", () => {

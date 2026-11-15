@@ -82,7 +82,7 @@ export function leetcodeSlug(href) {
 // ---- browser side -------------------------------------------------------------
 
 /** Highlight Python source into `el` with CodeMirror's runMode (plain text if it is missing). */
-function highlightPython(code, el) {
+export function highlightPython(code, el) {
   el.textContent = "";
   const CM = window.CodeMirror;
   if (CM && typeof CM.runMode === "function") {
@@ -100,8 +100,9 @@ function highlightPython(code, el) {
  * `images: false` replaces every image with its alt text before it reaches the page (see
  * sanitizeHtml); coach output and matrix evidence use it, documents and statements do not.
  */
-export function renderMarkdown(markdown, { basePath = "", images = true } = {}) {
-  const html = window.marked.parse(stripToc(markdown), { gfm: true, async: false });
+// breaks: a single newline becomes <br>. Chat replies are plain text where each line is meant to stay a line.
+export function renderMarkdown(markdown, { basePath = "", images = true, breaks = false } = {}) {
+  const html = window.marked.parse(stripToc(markdown), { gfm: true, breaks, async: false });
   const root = document.createElement("div");
   root.className = "md";
   root.appendChild(sanitizeHtml(html, { images }));

@@ -20,7 +20,7 @@ export function redoFailure(err, title) {
 /** The one question both Redo buttons ask. What it clears and what it keeps. */
 export function redoQuestion(title) {
   return "Start " + title + " again from the skeleton? The code, the four boxes and the coach chat are cleared. "
-    + "Your time and past submits stay.";
+    + "Your time and past submits stay, and the code you have now is kept in the problem's history.";
 }
 
 /**
