@@ -5,11 +5,11 @@
 You work through the course in a local web app. An AI coach (Claude Code or OpenAI Codex, running on your own account) sets up your plan, marks your answers, reviews your code and keeps your notes. It won't write your solutions unless you ask for one.
 
 <p align="center">
-  <a href="docs/overview.mp4">
+  <a href="https://idrisalami.github.io/leetcode-prep-kit/">
     <img src="docs/overview.png" alt="Watch the 3-minute overview" width="760">
   </a>
   <br>
-  <a href="docs/overview.mp4"><b>▶ Watch the 3-minute overview</b></a>
+  <a href="https://idrisalami.github.io/leetcode-prep-kit/"><b>▶ Watch the 3-minute overview</b></a>
 </p>
 
 If you already have the folder, the same video is at `docs/overview.mp4`.
@@ -90,7 +90,7 @@ leetcode-prep-kit/
 │   ├── reference/  Python toolkit, decision rules, bug checklist
 │   ├── templates/  blank copies of your notes files
 │   └── diagnostic.md
-├── docs/           the overview video
+├── docs/           the overview video and its web page
 ├── CLAUDE.md       coaching rules for Claude Code
 └── AGENTS.md       the same rules for OpenAI Codex
 ```
