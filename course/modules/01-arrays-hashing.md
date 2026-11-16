@@ -97,6 +97,28 @@ That is the optimisation pass. It is three questions, it fits in twenty seconds,
 
 Try Reuse first; it is strictly cheaper when it works. Remember is the escape this module teaches in full. Order gets its cost and its Python tools here, in §Sorting as a tool. The pointer and window forms of Order and Reuse come later, in module 03.
 
+```compare
+title: The three escapes
+option: Remember
+  Trades: space for time
+  Move: store what you've already seen, ask the store
+  Cost: O(n) space
+  Signal: "are there duplicates", "has this been seen"
+  Example: Two Sum
+option: Order
+  Trades: a one-off sort for time
+  Move: sort first, one comparison rules out a region
+  Cost: O(n log n) upfront
+  Signal: "intervals", "closest pair of values", "sort"
+  Example: sort, then one scan
+option: Reuse
+  Trades: a cleverer loop for time
+  Move: compute i's answer from i-1's, in O(1)
+  Cost: nothing extra
+  Signal: "maximum, minimum or best so far"
+  Example: Best Time to Buy and Sell Stock
+```
+
 ## 0.2 The structure and how it works
 
 ### The list: a row of numbered slots
@@ -416,6 +438,18 @@ def subarraySum(nums, k):
 ```
 
 *Invariant:* at the top of each iteration, `seen` counts every prefix sum that ends *before* the current element, including the empty one. O(n) time, O(n) space.
+
+```steps
+title: subarraySum([1, 2, 3], k=3)
+array: 1 2 3
+- i=0 seen=[0:1] | Start. `running` is 0, `count` is 0. `seen` holds the empty prefix.
+- i=0 seen=[0:1] | `running` is 1. Look up `1 - 3 = -2`: not seen, so `count` stays 0.
+- i=0 seen=[0:1, 1:1] | Record prefix 1.
+- i=1 seen=[0:1, 1:1] | `running` is 3. Look up `3 - 3 = 0`: seen once, so `count` becomes 1. That is `[1, 2]`.
+- i=1 seen=[0:1, 1:1, 3:1] | Record prefix 3.
+- i=2 seen=[0:1, 1:1, 3:1] | `running` is 6. Look up `6 - 3 = 3`: seen once, so `count` becomes 2. That is `[3]`.
+- i=2 seen=[0:1, 1:1, 3:1, 6:1] | Record prefix 6. The answer is 2.
+```
 
 **Two details carry the whole solution.**
 
