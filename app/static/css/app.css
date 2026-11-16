@@ -553,7 +553,7 @@ ul.plain li:last-child { margin-bottom: 0; }
 
 /* Widgets from lesson-widgets.js: ```steps (stepper) and ```compare (segmented switch). */
 .lesson { --w-bg: var(--surface); --w-sub: #f7f6f2; --w-seg: #ecebe6; --w-seg-on: #ffffff;
-  --cell-line: #c9d9ee; --cell-out-bg: #ecebe6; --cell-out-line: #e3e1da; --cell-out-ink: #b5b3ab;
+  --cell-line: #c9d9ee; --cell-out-bg: #ecebe6; --cell-out-line: #e3e1da; --cell-out-ink: #85837b;
   --cell-mid-line: #5b4fd6; --cell-mid-bg: #ece9fd; --cell-mid-ink: #3b2fb0; }
 .lesson .widget { border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; margin: 18px 0; background: var(--w-bg); }
 .lesson .widget:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -582,7 +582,7 @@ ul.plain li:last-child { margin-bottom: 0; }
 @media (max-width: 560px) { .lesson .compare dl { grid-template-columns: 1fr; gap: 2px; } .lesson .compare dd { margin-bottom: 8px; } }
 @media (prefers-color-scheme: dark) {
   .lesson { --w-sub: #222220; --w-seg: #2a2a27; --w-seg-on: #3a3a36;
-    --cell-line: #2f4a6b; --cell-out-bg: #222220; --cell-out-line: #2e2e2b; --cell-out-ink: #5f5e58;
+    --cell-line: #2f4a6b; --cell-out-bg: #222220; --cell-out-line: #2e2e2b; --cell-out-ink: #7a7972;
     --cell-mid-line: #8b80f0; --cell-mid-bg: #2a2550; --cell-mid-ink: #b3abf5; }
 }
 
