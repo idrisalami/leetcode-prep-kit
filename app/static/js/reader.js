@@ -8,6 +8,7 @@ import { h, clear, difficultyPill, statusMark, emptyState, toast, fmtDuration } 
 import { redoButton } from "./redo.js";
 import { renderMarkdown, leetcodeSlug, docRoute } from "./md.js";
 import { refreshNav, courseData, courseLoadError } from "./main.js";
+import { enrichLesson } from "./lesson.js";
 
 const WIDE = 1100;
 
@@ -73,7 +74,8 @@ function collapseAnswers(root) {
     if (!/^self-check answers$/i.test(hd.textContent.trim())) continue;
     const details = h("details", { class: "answers" }, h("summary", null, "Show answers"));
     let n = hd.nextSibling;
-    while (n && !(n.nodeType === 1 && /^h[12]$/.test(n.localName))) {
+    // Stop at the next h1/h2, or at the eyebrow that the lesson pass puts above an h2.
+    while (n && !(n.nodeType === 1 && (/^h[12]$/.test(n.localName) || n.classList.contains("eyebrow")))) {
       const next = n.nextSibling;
       details.appendChild(n);
       n = next;
@@ -269,6 +271,7 @@ export async function render(container, params) {
   const bySlug = new Map(problems.map((p) => [p.slug, p]));
   const md = renderMarkdown(doc.markdown || "", { basePath: path });
   const fileTitle = takeTitle(md);
+  enrichLesson(md, { path, isModule });
   collapseAnswers(md);
   addDrillTools(md, bySlug);
 
@@ -278,9 +281,14 @@ export async function render(container, params) {
     if (list.length) {
       const card = solveCard(list, isStale);
       const drill = Array.from(md.querySelectorAll("h2")).find((x) => /^drill set/i.test(x.textContent.trim()));
-      // The divider before the drill heading belongs above the table.
-      const anchor = drill && drill.previousElementSibling && drill.previousElementSibling.localName === "hr"
-        ? drill.previousElementSibling : drill;
+      // The eyebrow above the drill heading, and the divider above that, belong below the table.
+      let anchor = drill;
+      if (anchor && anchor.previousElementSibling && anchor.previousElementSibling.classList.contains("eyebrow")) {
+        anchor = anchor.previousElementSibling;
+      }
+      if (anchor && anchor.previousElementSibling && anchor.previousElementSibling.localName === "hr") {
+        anchor = anchor.previousElementSibling;
+      }
       if (anchor) anchor.before(card);
       else md.append(card);
     }
@@ -303,7 +311,7 @@ export async function render(container, params) {
     head.append(h("h1", null, title), h("p", { class: "lede small" }, path));
   }
 
-  const article = h("article", { class: "card doc" }, md);
+  const article = h("article", { class: "card doc lesson" }, md);
   const toc = buildToc(md, path);
   clear(container);
   container.append(head, toc ? h("div", { class: "reader" }, toc.toc, article) : article);

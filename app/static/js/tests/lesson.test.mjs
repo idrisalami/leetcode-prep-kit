@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   classifyCallout, bigOClass, countWords, readingMinutes, pairSelfCheck, tallyText,
   progressLine, countsAsSection, newlyRead, parseStored, load, store,
+  splitTokenLines, lineMark, eyebrowText, splitH2Number, cellBadge,
 } from "../lesson.js";
 
 test("classifyCallout follows the spec table", () => {
@@ -97,4 +98,51 @@ test("load and store round-trip through a working storage", () => {
   store("prep:selfcheck:x", { 0: "got" });
   assert.deepEqual(load("prep:selfcheck:x", {}), { 0: "got" });
   globalThis.localStorage = saved;
+});
+
+test("splitTokenLines splits at newlines and keeps a token's class on both sides", () => {
+  const lines = splitTokenLines([
+    { cls: "cm-keyword", text: "def" }, { cls: null, text: " f():\n    " },
+    { cls: "cm-string", text: '"""a\nb"""' }, { cls: null, text: "\n" }, { cls: "cm-comment", text: "# ✗ x" },
+  ]);
+  assert.deepEqual(lines, [
+    [{ cls: "cm-keyword", text: "def" }, { cls: null, text: " f():" }],
+    [{ cls: null, text: "    " }, { cls: "cm-string", text: '"""a' }],
+    [{ cls: "cm-string", text: 'b"""' }],
+    [{ cls: "cm-comment", text: "# ✗ x" }],
+  ]);
+  assert.deepEqual(splitTokenLines([{ cls: null, text: "a\n\nb" }]),
+    [[{ cls: null, text: "a" }], [], [{ cls: null, text: "b" }]]);
+});
+
+test("lineMark reads only the comment", () => {
+  assert.equal(lineMark("hi = mid - 1   # ✗ drops the answer"), "bad");
+  assert.equal(lineMark("hi = mid       # ✓ keeps it"), "good");
+  assert.equal(lineMark("print('✗')"), "");
+  assert.equal(lineMark("x = 1  # fine"), "");
+  assert.equal(lineMark(""), "");
+});
+
+test("eyebrowText", () => {
+  assert.equal(eyebrowText("0.5", 9), "§0.5 · about 9 min");
+  assert.equal(eyebrowText(null, 1), "about 1 min");
+});
+
+test("splitH2Number", () => {
+  assert.deepEqual(splitH2Number("0.5 The primitives"), { num: "0.5", lead: "0.5 ", rest: "The primitives" });
+  assert.deepEqual(splitH2Number("0.10 Ten"), { num: "0.10", lead: "0.10 ", rest: "Ten" });
+  assert.equal(splitH2Number("Exact match: the canonical template"), null);
+  assert.equal(splitH2Number("0.5"), null);
+});
+
+test("cellBadge pills plain and bold Big-O cells, nothing else", () => {
+  assert.equal(cellBadge("O(1)", []), "fast");
+  assert.equal(cellBadge(" O(log n) ", []), "fast");
+  assert.equal(cellBadge("O(n)", ["strong"]), "mid");
+  assert.equal(cellBadge("O(hi – lo)", []), "mid");
+  assert.equal(cellBadge("the cost of the check, often O(n)", []), null);
+  assert.equal(cellBadge("O(R) time and space", []), null);
+  assert.equal(cellBadge("O(n)", ["code"]), null); // code cells take the code path
+  assert.equal(cellBadge("O(n)", ["strong", "em"]), null);
+  assert.equal(cellBadge("O(n)", ["a"]), null);
 });

@@ -489,6 +489,68 @@ ul.plain li:last-child { margin-bottom: 0; }
 .solve-card td a:hover { text-decoration: underline; }
 .read-toggle { margin-top: 12px; }
 
+/* ---- lesson ----------------------------------------------------------------- */
+/* Static enrichment from lesson.js: eyebrows, lead, callouts, ✗/✓ code lines, Big-O badges. */
+
+.lesson { --call-rule-bg: var(--accent-soft); --call-trap-bg: #fff6e0; --call-tip-bg: #e9f5e7;
+  --call-plain-bg: #f6f5f1; --code-bad: rgba(201, 48, 47, .2); --code-good: rgba(0, 160, 0, .14); }
+
+.lesson .eyebrow {
+  display: flex; gap: 10px; align-items: center; margin: 34px 0 0; padding-top: 18px;
+  border-top: 1px solid var(--line); color: var(--text-3);
+  font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+}
+.lesson .eyebrow:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+.lesson .md hr + .eyebrow { border-top: 0; padding-top: 0; }
+.lesson .eyebrow .eyebrow-num { color: var(--link); }
+.lesson .eyebrow .eyebrow-time { font-weight: 600; letter-spacing: 0; text-transform: none; }
+.lesson .eyebrow .eyebrow-num + .eyebrow-time::before { content: "· "; color: var(--text-3); }
+.lesson .md .eyebrow + h2 { margin-top: 4px; padding-top: 0; border-top: 0; font-size: 24px; letter-spacing: -.01em; }
+.lesson .md h3 { font-size: 17px; margin-top: 28px; }
+.lesson .sr-num {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+.lesson .md p.lead { color: var(--text-2); font-size: 16px; }
+
+.lesson .md .call {
+  border-left: 4px solid var(--line); border-radius: 0 10px 10px 0; padding: 12px 16px;
+  margin: 16px 0; color: var(--text); background: var(--call-plain-bg);
+}
+.lesson .md .call > :last-child { margin-bottom: 0; }
+.lesson .md .call-lbl {
+  display: block; margin-bottom: 4px; font-size: 11px; font-weight: 800;
+  letter-spacing: .08em; text-transform: uppercase;
+}
+.lesson .md .call-rule, .lesson .md .call-question { border-color: var(--accent); background: var(--call-rule-bg); }
+.lesson .md .call-rule .call-lbl, .lesson .md .call-question .call-lbl { color: var(--link); }
+.lesson .md .call-rule .big { font-size: 16px; font-weight: 700; }
+.lesson .md .call-question p { font-size: 17px; font-weight: 600; }
+.lesson .md .call-trap { border-color: #c98a00; background: var(--call-trap-bg); }
+.lesson .md .call-trap .call-lbl { color: var(--lvl-medium-ink); }
+.lesson .md .call-say { border-color: var(--good); background: var(--call-tip-bg); }
+.lesson .md .call-say .call-lbl { color: var(--lvl-easy-ink); }
+.lesson .md .call-pointer { border-color: var(--text-3); color: var(--text-2); }
+.lesson .md .call-pointer .call-lbl { color: var(--text-3); }
+.lesson .md .call-plain { border-left-width: 3px; border-color: var(--track); background: none; padding: 2px 0 2px 14px; color: var(--text-2); }
+
+.lesson .md pre .code-line { display: block; }
+.lesson .md pre .code-line.bad, .lesson .md pre .code-line.good {
+  margin: 0 -14px; padding: 0 14px 0 11px; min-width: calc(100% + 28px); border-left: 3px solid;
+}
+.lesson .md pre .code-line.bad { background: var(--code-bad); border-color: #e66767; }
+.lesson .md pre .code-line.good { background: var(--code-good); border-color: #5fbf5f; }
+
+.lesson .md td .bigo { font: 700 12px var(--mono); padding: 2px 7px; border-radius: 6px; white-space: nowrap; }
+.lesson .md .bigo-fast { color: var(--lvl-easy-ink); background: var(--lvl-easy-bg); }
+.lesson .md .bigo-mid { color: var(--lvl-medium-ink); background: var(--lvl-medium-bg); }
+.lesson .md .bigo-steep { color: var(--lvl-hard-ink); background: var(--lvl-hard-bg); }
+
+@media (prefers-color-scheme: dark) {
+  .lesson { --call-trap-bg: var(--lvl-medium-bg); --call-tip-bg: var(--lvl-easy-bg); --call-plain-bg: #222220; }
+  .lesson .md .call-trap { border-color: var(--warn); }
+}
+
 /* ---- welcome ------------------------------------------------------------------ */
 /* #/welcome: what the app is, then one card per coach tool the server looked for. */
 
