@@ -176,3 +176,46 @@ test("recordResult overwrites one card and leaves the input alone", () => {
   assert.deepEqual(before, { 0: "got" });
   assert.deepEqual(recordResult(after, 2, "got"), { 0: "missed", 2: "got" });
 });
+
+import { cleanRead, parentSection, railStats } from "../lesson.js";
+
+test("cleanRead keeps only string ids still on the page, once each", () => {
+  const ids = ["a", "b", "c"];
+  assert.deepEqual(cleanRead(["a", "gone", "c", "a", 3, null], ids), ["a", "c"]);
+  assert.deepEqual(cleanRead({ a: 1 }, ids), []);
+  assert.deepEqual(cleanRead(null, ids), []);
+});
+
+test("parentSection finds the h2 that holds the current link", () => {
+  const kinds = ["h2", "h3", "h3", "h2", "h3"];
+  assert.equal(parentSection(kinds, 2), 0);
+  assert.equal(parentSection(kinds, 3), 3);
+  assert.equal(parentSection(kinds, 4), 3);
+  assert.equal(parentSection(["h3", "h2"], 0), -1); // an h3 before any h2
+  assert.equal(parentSection(kinds, -1), -1);
+});
+
+test("railStats counts only counted sections and gives the bar width", () => {
+  const sections = [{ id: "a", counted: true }, { id: "b", counted: true }, { id: "x", counted: false },
+    { id: "c", counted: true }];
+  assert.deepEqual(railStats(sections, new Set(["a", "x"])), { read: 1, total: 3, pct: 33 });
+  assert.deepEqual(railStats(sections, new Set(["a", "b", "c"])), { read: 3, total: 3, pct: 100 });
+  assert.deepEqual(railStats([], new Set()), { read: 0, total: 0, pct: 0 });
+});
+
+import { newlySeen } from "../lesson.js";
+
+test("newlySeen: a scroll past counts, a jump past does not", () => {
+  const vh = 800;
+  // Scrolled from the top to far down: both ends crossed the bottom edge since the last look.
+  const prev = { a: 900, b: 2000 };
+  assert.deepEqual(newlySeen([{ id: "a", top: -500 }, { id: "b", top: 300 }], prev, vh, new Set()), ["a", "b"]);
+  // After an anchor jump the baseline is the landing position: a skipped end stays above the
+  // viewport and never crossed, so it is not read; one on screen is.
+  const landed = { a: -1500, b: 100 };
+  assert.deepEqual(newlySeen([{ id: "a", top: -1600 }, { id: "b", top: 0 }], landed, vh, new Set()), ["b"]);
+  // Scrolling back up brings the skipped end into view: now it counts.
+  assert.deepEqual(newlySeen([{ id: "a", top: 200 }], { a: -1600 }, vh, new Set()), ["a"]);
+  // Already read, or still below the fold: nothing.
+  assert.deepEqual(newlySeen([{ id: "a", top: 100 }, { id: "c", top: 900 }], {}, vh, new Set(["a"])), []);
+});

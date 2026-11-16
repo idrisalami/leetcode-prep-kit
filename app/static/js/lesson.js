@@ -101,6 +101,35 @@ export function newlyRead(ends, viewportH, read) {
   return ends.filter((e) => !read.has(e.id) && e.top < viewportH).map((e) => e.id);
 }
 
+/**
+ * newlyRead, minus ends that only got above the viewport by a jump: an end counts when it is on
+ * screen now, or was below the fold at the last look (`prev`: id -> top) and the reader scrolled past it.
+ */
+export function newlySeen(ends, prev, viewportH, read) {
+  const top = new Map(ends.map((e) => [e.id, e.top]));
+  return newlyRead(ends, viewportH, read).filter((id) => top.get(id) >= 0 || !(id in prev) || prev[id] >= viewportH);
+}
+
+/** Stored read ids, minus anything that is not a heading id on the page now. */
+export function cleanRead(raw, ids) {
+  if (!Array.isArray(raw)) return [];
+  const live = new Set(ids);
+  return [...new Set(raw.filter((id) => typeof id === "string" && live.has(id)))];
+}
+
+/** Index of the h2 at or before link `i` (kinds are "h2"/"h3"), or -1. */
+export function parentSection(kinds, i) {
+  for (let k = Math.min(i, kinds.length - 1); k >= 0; k--) if (kinds[k] === "h2") return k;
+  return -1;
+}
+
+/** Read and total over counted sections, and the bar width as a whole percent. */
+export function railStats(sections, read) {
+  const counted = sections.filter((s) => s.counted);
+  const n = counted.filter((s) => read.has(s.id)).length;
+  return { read: n, total: counted.length, pct: counted.length ? Math.round((100 * n) / counted.length) : 0 };
+}
+
 export function parseStored(raw, fallback) {
   if (raw == null) return fallback;
   try {

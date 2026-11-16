@@ -6,9 +6,10 @@
 import { get, post, ApiError } from "./api.js";
 import { h, clear, difficultyPill, statusMark, emptyState, toast, fmtDuration } from "./ui.js";
 import { redoButton } from "./redo.js";
-import { renderMarkdown, leetcodeSlug, docRoute } from "./md.js";
+import { renderMarkdown, leetcodeSlug } from "./md.js";
 import { refreshNav, courseData, courseLoadError } from "./main.js";
 import { enrichLesson } from "./lesson.js";
+import { buildRail } from "./rail.js";
 
 const WIDE = 1100;
 
@@ -97,21 +98,8 @@ function takeTitle(root) {
   return "";
 }
 
-function buildToc(root, path) {
-  const heads = Array.from(root.querySelectorAll("h2, h3"));
-  if (heads.length < 2) return null;
-  const links = heads.map((hd) => h("a", { href: docRoute(path, hd.id),
-    class: hd.localName === "h3" ? "toc-3" : null, dataset: { id: hd.id } }, hd.textContent.trim()));
-  const toc = h("details", { class: "toc" },
-    h("summary", null, h("span", { class: "toc-title" }, "Contents")),
-    h("nav", { "aria-label": "Contents" }, links));
-  toc.open = window.innerWidth >= WIDE;
-  // On wide screens the list is a fixed sidebar, not a collapsible block.
-  toc.firstChild.addEventListener("click", (e) => { if (window.innerWidth >= WIDE) e.preventDefault(); });
-  return { toc, heads, links };
-}
-
-function trackActive({ toc, heads, links }, container) {
+function trackActive(rail, container) {
+  const { toc, heads, links } = rail;
   let current = "";
   const set = (id) => {
     if (id === current) return;
@@ -119,16 +107,22 @@ function trackActive({ toc, heads, links }, container) {
     for (const a of links) a.classList.toggle("on", a.dataset.id === id);
     const on = links.find((a) => a.dataset.id === id);
     if (on && window.innerWidth >= WIDE) {
+      // The summary is pinned over the top of the list, so "in view" starts below it.
       const tr = toc.getBoundingClientRect();
+      const head = toc.firstElementChild.getBoundingClientRect();
       const ar = on.getBoundingClientRect();
-      if (ar.top < tr.top || ar.bottom > tr.bottom) on.scrollIntoView({ block: "nearest" });
+      if (ar.top < head.bottom || ar.bottom > tr.bottom) {
+        toc.style.scrollPaddingTop = head.height + "px";
+        on.scrollIntoView({ block: "nearest" });
+      }
     }
   };
   let queued = false;
   let pinned = null; // the anchor just jumped to wins until the page scrolls on
   const update = () => {
     queued = false;
-    if (pinned && Math.abs(window.scrollY - pinned.y) < 4) { set(pinned.id); return; }
+    // A jump to an anchor moves the rail's baseline but reads nothing on the way.
+    if (pinned && Math.abs(window.scrollY - pinned.y) < 4) { set(pinned.id); rail.onUpdate?.(true); return; }
     pinned = null;
     let id = heads.length ? heads[0].id : "";
     // At the bottom of the page the last headings can never reach the top: take the last
@@ -140,6 +134,7 @@ function trackActive({ toc, heads, links }, container) {
       else break;
     }
     set(id);
+    rail.onUpdate?.();
   };
   const onScroll = () => {
     if (!queued) { queued = true; requestAnimationFrame(update); }
@@ -276,8 +271,10 @@ export async function render(container, params) {
   addDrillTools(md, bySlug);
 
   const head = h("header", { class: "reader-head" });
+  let list = null;
+  let title;
   if (isModule) {
-    const list = moduleProblems(md, problems, mod.id);
+    list = moduleProblems(md, problems, mod.id);
     if (list.length) {
       const card = solveCard(list, isStale);
       const drill = Array.from(md.querySelectorAll("h2")).find((x) => /^drill set/i.test(x.textContent.trim()));
@@ -305,15 +302,18 @@ export async function render(container, params) {
       }
     };
     drawHead();
+    title = mod.id + " · " + mod.title;
   } else {
-    const title = fileTitle || doc.title || path;
+    title = fileTitle || doc.title || path;
     document.title = title + " · LeetCode Prep";
     head.append(h("h1", null, title), h("p", { class: "lede small" }, path));
   }
 
   const article = h("article", { class: "card doc lesson" }, md);
-  const toc = buildToc(md, path);
+  const drills = list && list.length
+    ? { solved: list.filter((p) => p.status === "solved").length, count: list.length } : null;
+  const rail = buildRail(md, { path, title, drills });
   clear(container);
-  container.append(head, toc ? h("div", { class: "reader" }, toc.toc, article) : article);
-  return toc ? trackActive(toc, container) : null;
+  container.append(head, rail ? h("div", { class: "reader" }, rail.toc, article) : article);
+  return rail ? trackActive(rail, container) : null;
 }
