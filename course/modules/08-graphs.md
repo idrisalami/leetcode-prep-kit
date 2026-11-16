@@ -416,6 +416,26 @@ They mark the same cells **except the start**. In B, the cell the outer loop lau
 
 One caveat for DFS with a container: mark on push gives you no *"I have finished this node"* moment. Topological sort and directed cycle detection both need one, so for those use recursion, where entry and exit are both visible (§Directed cycles: three colours).
 
+```compare
+title: Mark on push, or mark on pop?
+option: Mark on push
+  Where the mark goes: `visited.add(nei)` as it joins the queue
+  Queue on the diamond: D enters once
+  Pushes on the diamond: 4
+  Processed twice?: no, D is never offered again
+  Push-time records: written once, the first value is final
+  Cost: queue stays O(V)
+  Module says: BFS and iterative DFS, always
+option: Mark on pop
+  Where the mark goes: add the node when it comes out of the queue
+  Queue on the diamond: D enters twice
+  Pushes on the diamond: 5
+  Processed twice?: no, the second copy is skipped on pop
+  Push-time records: overwritten, `dist[X]` ends at 2, not 1
+  Cost: queue can grow to O(E)
+  Module says: only Dijkstra, because its distance can improve
+```
+
 ### Define it by a property, never by the route
 
 The common way to get `visited` wrong is to define it by how you got to a node:
@@ -534,6 +554,19 @@ def dfs(node):
 ```
 
 When a problem needs neither distances nor levels, both are correct, and you choose on cost: recursion is shorter, BFS or an explicit stack has no depth limit.
+
+```steps
+title: BFS on the diamond, from A
+array: A B C D
+- node=0 queue=[A] visited=[A] | `visited = {start}` and `q = deque([start])`. The front of the queue is on the left.
+- node=0 queue=[] visited=[A] | Pop A. Its neighbours are B and C.
+- node=0 queue=[B] visited=[A, B] | B is not visited. Mark it and push it, in the same step.
+- node=0 queue=[B, C] visited=[A, B, C] | C is not visited. Mark it and push it.
+- node=1 queue=[C] visited=[A, B, C] | Pop B. Its only neighbour is D.
+- node=1 queue=[C, D] visited=[A, B, C, D] | D is not visited. Mark it and push it.
+- node=2 queue=[D] visited=[A, B, C, D] | Pop C. Its neighbour D is already visited, so nothing is pushed.
+- node=3 queue=[] visited=[A, B, C, D] | Pop D. It has no neighbours. The queue is empty, so BFS ends. D was pushed once.
+```
 
 ### Why BFS never needs a relaxation test
 
