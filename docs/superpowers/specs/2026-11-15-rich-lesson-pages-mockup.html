@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mix of A and B</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #f3f2ee; font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif; color: #0b0b0b; }
+  code, pre { font-family: "SF Mono", Menlo, Consolas, monospace; }
+  .note-top { max-width: 1100px; margin: 18px auto 0; padding: 0 24px; color: #52514e; font-size: 14px; }
+  .note-top b { color: #0b0b0b; }
+  .shell { max-width: 1100px; margin: 14px auto 60px; display: grid; grid-template-columns: 220px 1fr; gap: 28px; padding: 0 24px; }
+
+  /* rail, from B */
+  aside { position: sticky; top: 16px; align-self: start; font-size: 13px; }
+  aside .mod { font-weight: 800; font-size: 14px; }
+  aside .sub { color: #6b6a64; }
+  aside .bar { height: 6px; background: #dce8f7; border-radius: 3px; margin: 8px 0 16px; overflow: hidden; }
+  aside .bar i { display: block; height: 100%; width: 38%; background: #2a78d6; }
+  aside a { display: flex; gap: 8px; align-items: center; padding: 5px 8px; border-radius: 7px; color: #52514e; text-decoration: none; }
+  aside a.on { background: #eef4fc; color: #1f66bd; font-weight: 700; }
+  aside .d { width: 8px; height: 8px; border-radius: 50%; background: #cfcdc5; flex: none; }
+  aside a.done .d { background: #008300; } aside a.on .d { background: #2a78d6; }
+
+  /* document, from A */
+  .doc { background: #fcfcfb; border: 1px solid #e3e1da; border-radius: 14px; padding: 38px 48px 44px; max-width: 780px; }
+  .eyebrow { color: #6b6a64; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; display: flex; gap: 10px; align-items: center; }
+  .eyebrow .meta { font-weight: 600; letter-spacing: 0; text-transform: none; color: #8d8c84; }
+  h2 { font-size: 28px; margin: 4px 0 6px; letter-spacing: -.01em; }
+  h3 { font-size: 19px; margin: 34px 0 8px; }
+  p { margin: 8px 0; }
+  p code, li code, td code, dd code { background: #f0eee8; border-radius: 5px; padding: 1px 5px; font-size: 13px; }
+  .lead { color: #52514e; font-size: 16px; }
+
+  .call { border-left: 4px solid; padding: 12px 16px; border-radius: 0 10px 10px 0; margin: 16px 0; }
+  .call .lbl { display: block; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 2px; }
+  .rule { border-color: #2a78d6; background: #eef4fc; } .rule .lbl { color: #1f66bd; }
+  .rule .big { font-size: 17px; font-weight: 700; color: #12325a; }
+  .trap { border-color: #c98a00; background: #fff6e0; } .trap .lbl { color: #7a5200; }
+  .tip { border-color: #008300; background: #e9f5e7; } .tip .lbl { color: #1b6b1f; }
+
+  /* interactive blocks, from B, sitting inside the column */
+  .widget { border: 1px solid #e3e1da; border-radius: 12px; padding: 16px 18px; margin: 16px 0; background: #fff; }
+  .wtitle { font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #6b6a64; display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .bigo { margin-left: auto; font: 700 12px "SF Mono", Menlo, monospace; padding: 2px 7px; border-radius: 6px; letter-spacing: 0; text-transform: none; }
+  .o-log { background: #e2f3df; color: #1b6b1f; } .o-n { background: #fdeeb5; color: #7a5200; }
+  .seg { display: inline-flex; background: #ecebe6; border-radius: 10px; padding: 3px; margin-bottom: 12px; }
+  .seg button { border: 0; background: none; padding: 6px 12px; border-radius: 8px; font-weight: 700; font-size: 13px; color: #52514e; cursor: pointer; }
+  .seg button.on { background: #fff; color: #0b0b0b; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  dl { display: grid; grid-template-columns: 120px 1fr; gap: 6px 14px; margin: 0; font-size: 14px; }
+  dt { color: #6b6a64; } dd { margin: 0; }
+
+  .arr { display: flex; gap: 6px; margin: 4px 0 8px; }
+  .cell { flex: 1; text-align: center; }
+  .cell .v { border: 2px solid #c9d9ee; background: #fff; border-radius: 8px; padding: 7px 0; font-weight: 700; transition: all .25s; }
+  .cell.out .v { background: #ecebe6; border-color: #e3e1da; color: #b5b3ab; }
+  .cell.mid .v { border-color: #5b4fd6; background: #ece9fd; color: #3b2fb0; }
+  .cell.ans .v { border-color: #008300; background: #e2f3df; color: #1b6b1f; }
+  .cell .i { font-size: 11px; color: #8d8c84; }
+  .cell .p { height: 17px; font-size: 11px; font-weight: 800; color: #2a78d6; }
+  .narr { font-size: 14px; min-height: 44px; background: #f7f6f2; border-radius: 8px; padding: 8px 12px; }
+  .row { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+  .btn { border: 0; background: #256abf; color: #fff; font-weight: 700; border-radius: 9px; padding: 7px 14px; cursor: pointer; font-size: 13px; }
+  .btn.ghost { background: #ecebe6; color: #0b0b0b; }
+
+  pre { background: #1d1f23; color: #e6e3da; border-radius: 10px; padding: 12px 16px; font-size: 13px; margin: 10px 0; line-height: 1.55; }
+  .kw { color: #8fb8f2; } .fn { color: #f0b38a; } .cm { color: #8b939e; }
+  .bad { display: block; background: rgba(201,48,47,.2); border-left: 3px solid #e66767; margin: 0 -16px; padding: 0 13px; }
+  .good { display: block; background: rgba(0,160,0,.14); border-left: 3px solid #5fbf5f; margin: 0 -16px; padding: 0 13px; }
+  .bugs { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .bug { background: #fbe2e0; border: 1px solid #eda9a6; border-radius: 99px; padding: 3px 11px; font-size: 13px; color: #8a1f1d; }
+
+  .flip { perspective: 900px; cursor: pointer; margin-top: 10px; }
+  .flip .in { position: relative; min-height: 96px; transition: transform .5s; transform-style: preserve-3d; }
+  .flip.open .in { transform: rotateY(180deg); }
+  .flip .f, .flip .b { position: absolute; inset: 0; backface-visibility: hidden; border-radius: 10px; padding: 12px 16px; font-size: 14px; }
+  .flip .f { background: #fff6e0; border: 1px solid #e3c25a; }
+  .flip .b { background: #e2f3df; border: 1px solid #9fd19a; transform: rotateY(180deg); }
+  .flip small { display: block; font-weight: 800; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: #6b6a64; }
+  .marks { display: flex; gap: 8px; margin-top: 8px; }
+  .marks button { border: 1px solid #e3e1da; background: #fff; border-radius: 8px; padding: 4px 10px; font-size: 13px; cursor: pointer; }
+</style>
+</head>
+<body>
+<p class="note-top"><b>A + B, my first guess:</b> A's single reading column and calm callouts, with B's side rail and working pieces placed inline. I dropped B's gradient banner and card grid. Everything here works when you click it.</p>
+<div class="shell">
+  <aside>
+    <div class="mod">04 · Binary search</div>
+    <div class="sub">3 of 8 sections read · 2/9 drills</div>
+    <div class="bar"><i></i></div>
+    <a class="done"><span class="d"></span>0.1 The one question</a>
+    <a class="done"><span class="d"></span>0.2 How it works</a>
+    <a class="done"><span class="d"></span>0.3 Vocabulary</a>
+    <a class="on"><span class="d"></span>0.5 The primitives</a>
+    <a><span class="d"></span>Exact match</a>
+    <a><span class="d"></span>Boundary search</a>
+    <a><span class="d"></span>Drill set</a>
+    <a><span class="d"></span>Self-check</a>
+  </aside>
+
+  <article class="doc">
+    <div class="eyebrow">§0.5 · The primitives <span class="meta">· about 9 min</span></div>
+    <h2>Primitive 1: the invariant</h2>
+    <p class="lead">This is the centre of the module. Everything else is bookkeeping.</p>
+
+    <div class="call rule"><span class="lbl">Rule</span><span class="big">The answer, if it exists, is inside the current range.</span><br>Every line in the loop body has one job: leave that sentence true. Writing <code>hi = mid - 1</code> claims "nothing at mid or beyond can be the answer."</div>
+
+    <div class="widget">
+      <div class="wtitle">▶ Watch it run · lower_bound(nums, 11), half-open <span class="bigo o-log">O(log n)</span></div>
+      <div class="arr" id="arr"></div>
+      <div class="narr" id="narr"></div>
+      <div class="row"><button class="btn ghost" onclick="step(-1)">◀ Back</button><button class="btn" onclick="step(1)">Next step ▶</button><span id="cnt" style="color:#6b6a64;font-size:13px"></span></div>
+    </div>
+
+    <h3>Primitive 2: the range convention</h3>
+    <p>Pick one before writing the loop. The rest of the code is read off that choice.</p>
+    <div class="widget">
+      <div class="seg"><button class="on" onclick="conv(this,0)">Closed [lo, hi]</button><button onclick="conv(this,1)">Half-open [lo, hi)</button></div>
+      <dl id="convdl"></dl>
+    </div>
+    <div class="call tip"><span class="lbl">Interview tip</span>Say the convention out loud before you code: "I'll use half-open, so <code>hi</code> starts at <code>len(nums)</code>."</div>
+
+    <h3>Searching part of an array: pass bounds, never slice</h3>
+<pre><span class="bad">left = nums[:index]              <span class="cm"># ✗ copies the array</span></span><span class="good"><span class="kw">def</span> <span class="fn">search</span>(lo, hi, target):       <span class="cm"># ✓ pass bounds</span></span>    ...</pre>
+    <div class="call trap"><span class="lbl">Trap</span>Slicing copies, so the O(log n) claim is now false. <span class="bigo o-n" style="margin-left:4px">O(n)</span>
+      <div class="bugs"><span class="bug">Copies: O(n) time and space</span><span class="bug">Indexes become relative</span><span class="bug">Empty slice → IndexError</span></div>
+    </div>
+
+    <h3>Check yourself</h3>
+    <div class="flip" onclick="this.classList.toggle('open')"><div class="in">
+      <div class="f"><small>Question · tap to flip</small>Under <code>[lo, hi)</code>, why is the loop <code>while lo &lt; hi</code> and not <code>&lt;=</code>?</div>
+      <div class="b"><small>Answer</small>When <code>lo == hi</code> the half-open range holds nothing, so there is nothing left to check. Read the operator off "range is non-empty".</div>
+    </div></div>
+    <div class="marks"><button>✓ Got it</button><button>✗ Missed it</button></div>
+  </article>
+</div>
+
+<script>
+  const CONV = [
+    [["Means", "<code>hi</code> is a candidate"], ["Start", "<code>lo, hi = 0, len(nums) - 1</code>"], ["Loop", "<code>while lo &lt;= hi</code>"], ["Discard right", "<code>hi = mid - 1</code>"], ["Ends when", "<code>lo &gt; hi</code>, range empty"], ["Use for", "Exact match"]],
+    [["Means", "<code>hi</code> is one past the last"], ["Start", "<code>lo, hi = 0, len(nums)</code>"], ["Loop", "<code>while lo &lt; hi</code>"], ["Discard right", "<code>hi = mid</code>"], ["Ends when", "<code>lo == hi</code>, that's the boundary"], ["Use for", "Boundary search"]],
+  ];
+  function conv(btn, i) {
+    if (btn) { btn.parentElement.querySelectorAll("button").forEach(b => b.classList.remove("on")); btn.classList.add("on"); }
+    document.getElementById("convdl").innerHTML = CONV[i].map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("");
+  }
+  conv(null, 0);
+  const NUMS = [1, 3, 5, 7, 9, 11, 13, 15];
+  const STEPS = [
+    { lo: 0, hi: 8, mid: null, say: "Start: <b>lo = 0, hi = 8</b>. Every index is still a candidate." },
+    { lo: 0, hi: 8, mid: 4, say: "mid = 4. nums[4] = 9 &lt; 11, so mid and everything left of it are ruled out: <b>lo = mid + 1</b>." },
+    { lo: 5, hi: 8, mid: 6, say: "mid = 6. nums[6] = 13 ≥ 11: mid is still a candidate, so keep it: <b>hi = mid</b>." },
+    { lo: 5, hi: 6, mid: 5, say: "mid = 5. nums[5] = 11 ≥ 11: keep it, <b>hi = mid</b>." },
+    { lo: 5, hi: 5, mid: null, ans: 5, say: "<b>lo == hi == 5</b>: the range is empty and lo is the boundary. Return 5." },
+  ];
+  let s = 0;
+  function draw() {
+    const st = STEPS[s];
+    document.getElementById("arr").innerHTML = NUMS.map((v, i) => {
+      const out = i < st.lo || i >= st.hi;
+      const cls = st.ans === i ? "ans" : st.mid === i ? "mid" : out ? "out" : "";
+      const tag = [i === st.lo ? "lo" : "", i === st.mid ? "mid" : "", i === st.hi ? "hi" : ""].filter(Boolean).join(" · ");
+      return `<div class="cell ${cls}"><div class="p">${tag}</div><div class="v">${v}</div><div class="i">${i}</div></div>`;
+    }).join("") + `<div class="cell out" style="flex:.6;${st.hi === 8 ? "" : "visibility:hidden"}"><div class="p">hi</div><div class="v" style="border-style:dashed">·</div><div class="i">8</div></div>`;
+    document.getElementById("narr").innerHTML = st.say;
+    document.getElementById("cnt").textContent = "Step " + (s + 1) + " of " + STEPS.length;
+  }
+  function step(d) { s = Math.max(0, Math.min(STEPS.length - 1, s + d)); draw(); }
+  draw();
+</script>
+</body>
+</html>
