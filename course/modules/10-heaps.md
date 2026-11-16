@@ -240,6 +240,32 @@ That is a weaker promise than sorted, and the weakness is deliberate. What it do
 | sorted list | O(n log n) | **O(n)** | O(1) | O(1) from the end of a list sorted largest first | O(log n) to find, O(n) to delete | yes |
 | **heap** | **O(n)** | **O(log n)** | **O(1)** | **O(log n)** | **O(n)** | **no** |
 
+```compare
+title: Three structures for a min
+option: Unsorted list
+  Build: O(1)
+  Insert: O(1)
+  Read min: O(n)
+  Extract min: O(n)
+  Find or delete any item: O(n)
+  Full order: no
+option: Sorted list
+  Build: O(n log n)
+  Insert: O(n)
+  Read min: O(1)
+  Extract min: O(1) from the end, if sorted largest first
+  Find or delete any item: O(log n) to find, O(n) to delete
+  Full order: yes
+option: Heap
+  Build: O(n)
+  Insert: O(log n)
+  Read min: O(1)
+  Extract min: O(log n)
+  Find or delete any item: O(n)
+  Full order: no
+```
+
+
 **Every bold entry in that table is a decision rule.** The heap wins exactly one pair of columns, insert and extract-min together, and it loses the last two outright (§When a heap is the wrong tool).
 
 ### The array layout
@@ -287,6 +313,17 @@ while x < parent(x):  swap them      ← walk UP toward the root
 
 The new element starts at a **leaf** and can travel the full height: O(log n).
 
+```steps
+title: Push 0, sift up
+array: 1 3 2 7 4 9 8
+- n=7 | The heap has 7 items. A push appends at index 7, which keeps the tree complete.
+- array=[1, 3, 2, 7, 4, 9, 8, 0] i=7 parent=3 | Append 0 at `i=7`. The parent of `i` is `(i - 1) // 2`, here 3, holding 7. 0 is smaller, so swap.
+- array=[1, 3, 2, 0, 4, 9, 8, 7] i=3 parent=1 | 0 is now at index 3. Its parent is `(3 - 1) // 2 = 1`, holding 3. 0 is smaller, so swap.
+- array=[1, 0, 2, 3, 4, 9, 8, 7] i=1 parent=0 | 0 is at index 1. Its parent is index 0, holding 1. 0 is smaller, so swap.
+- array=[0, 1, 2, 3, 4, 9, 8, 7] i=0 | 0 is at the root and has no parent. The heap property holds again.
+```
+
+
 **Sift down, used by pop:**
 
 ```
@@ -297,6 +334,17 @@ while it is > either child:
 ```
 
 The displaced element starts at the **root** and can travel the full height: O(log n).
+
+```steps
+title: Pop, sift down
+array: 1 3 2 7 4 9 8
+- i=0 | Pop: the answer is `h[0] = 1`, the minimum. The root is the hole to fill.
+- array=[8, 3, 2, 7, 4, 9] i=0 | Move the last item, 8, to the root. The array is one shorter and still complete.
+- array=[8, 3, 2, 7, 4, 9] i=0 child=2 | The children of `i` are `2*i + 1 = 1`, holding 3, and `2*i + 2 = 2`, holding 2. The smaller is at index 2. 8 is larger than 2.
+- array=[2, 3, 8, 7, 4, 9] i=2 child=5 | Swap with the smaller child. 8 is at index 2. Its left child, `2*2 + 1 = 5`, holds 9, and there is no right child.
+- array=[2, 3, 8, 7, 4, 9] i=2 | 8 is not larger than 9, so it stays. The new minimum is 2.
+```
+
 
 > ⚠️ **Swap with the *smaller* child, not with either.** Swapping with the larger one puts a bigger value above its smaller sibling and breaks the property you're repairing. This is the one line people get wrong when asked to write sift-down on a whiteboard.
 

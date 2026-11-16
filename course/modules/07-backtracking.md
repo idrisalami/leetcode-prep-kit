@@ -178,6 +178,8 @@ res.append(path[:])   # "record where I am"   : photograph the trail
       0   1
          / \
         3   2
+       /
+      0
 ```
 
 | Step | Call | What happens | `path` after |
@@ -186,7 +188,7 @@ res.append(path[:])   # "record where I am"   : photograph the trail
 | 2 | `leaf_path(0)` | `val == 0`, so `False`, nothing chosen | `[4]` |
 | 3 | `leaf_path(1)` | choose `1` | `[4, 1]` |
 | 4 | `leaf_path(3)` | choose `3` | `[4, 1, 3]` |
-| 5 | `leaf_path(None)` twice | `False`, `False` | `[4, 1, 3]` |
+| 5 | `leaf_path(0)`, then `leaf_path(None)` | `3` is not a leaf: its children give `False`, `False` | `[4, 1, 3]` |
 | 6 | back in `leaf_path(3)` | both children failed, so **undo** | `[4, 1]` |
 | 7 | `leaf_path(2)` | choose `2`, a leaf, so `True` | `[4, 1, 2]` |
 | 8 | unwinding | `True` all the way up, **no pops** | `[4, 1, 2]` |
@@ -194,6 +196,19 @@ res.append(path[:])   # "record where I am"   : photograph the trail
 **Read step 6.** The `3` branch failed and put `path` back exactly as it found it, so the `2` branch started clean. Without the undo the answer would be `[4, 1, 3, 2]`.
 
 **Read step 8.** On success nothing pops, on purpose: the filled-in `path` is what the caller wanted.
+
+```steps
+title: leaf_path on the tree: path at each instant
+- path=[] stack=[] | Nothing chosen yet. The top of the stack is on the right.
+- path=[4] stack=[4] | `leaf_path(4)`: CHOOSE 4. It is not a leaf, so try the left child.
+- path=[4] stack=[4, 0] | `leaf_path(0)`: `val == 0`, so `False`. Nothing was chosen, so nothing is undone.
+- path=[4, 1] stack=[4, 1] | Left failed. `leaf_path(1)`: CHOOSE 1, then try its left child.
+- path=[4, 1, 3] stack=[4, 1, 3] | `leaf_path(3)`: CHOOSE 3. It has a child, so it is not a leaf. Try the left child.
+- path=[4, 1, 3] stack=[4, 1, 3, 0] | `leaf_path(0)` under 3: `False`. The right child is `None`: `False` too.
+- path=[4, 1] stack=[4, 1] | Both children of 3 failed. UNDO: pop 3 and return `False`.
+- path=[4, 1, 2] stack=[4, 1, 2] | Back in `leaf_path(1)`, try the right. `leaf_path(2)`: CHOOSE 2. A leaf, so `True`.
+- path=[4, 1, 2] stack=[] | `True` all the way up, no pops. `path` is the answer.
+```
 
 ### The contract
 
@@ -580,6 +595,34 @@ def all_orderings(items):
 | "all …, and the input **has duplicates**" | that pattern plus the sibling skip (§Duplicates in the input) |
 
 **It is a reading question, not a design question.** Name the pattern out loud, write its template, then apply the deltas below.
+
+```compare
+title: Which one is it?
+option: Subsets
+  Answer: every sub-collection
+  Order matters: no
+  Loop: `range(start, n)`
+  Recurse: `dfs(i + 1)`
+  Record where: every node
+  Count: 2ⁿ
+  Signal words: all subsets, power set, any number of
+option: Combinations
+  Answer: every sub-collection of size k
+  Order matters: no
+  Loop: `range(start, n)`
+  Recurse: `dfs(i + 1)`
+  Record where: `len(path) == k`, then return
+  Count: C(n, k)
+  Signal words: exactly k, choose k, all pairs
+option: Orderings
+  Answer: every arrangement of all items
+  Order matters: yes
+  Loop: `range(n)` plus `used`
+  Recurse: `dfs()`, no index
+  Record where: `len(path) == n`, then return
+  Count: n!
+  Signal words: permutations, order matters, rearrange
+```
 
 ---
 

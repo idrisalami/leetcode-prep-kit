@@ -9,13 +9,23 @@ export class BlockError extends Error {
   }
 }
 
-export const POINTER_KEYS = ["lo", "hi", "l", "r", "i", "j", "left", "right", "mid", "ans"];
+// Pointers: any name with a cell index (lo=0, prev=2). mid and ans also colour their cell;
+// ans draws no label. A pair from PAIRS greys the cells outside it.
+// Rows: name=[a, b] sets a row of items shown under the array, kept until a later step sets it again.
+// array=[...] replaces the array's values from that step on. A "_" value is a blank cell.
 const PAIRS = [["lo", "hi"], ["l", "r"], ["left", "right"]];
 const RANGES = ["closed", "half-open"];
+const NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
+const TOKEN = /([^\s=]+)=(\[[^\]]*\]?|\S*)/g;
 
 function header(line) {
   const m = /^(title|array|range):\s*(.*)$/.exec(line);
   return m ? { key: m[1], value: m[2].trim() } : null;
+}
+
+function items(where, key, val) {
+  if (!val.endsWith("]")) throw new BlockError(`${where}: ${key}=${val} is missing its closing ]`);
+  return val.slice(1, -1).split(",").map((x) => x.trim()).filter(Boolean);
 }
 
 export function parseSteps(text) {
@@ -34,31 +44,49 @@ export function parseSteps(text) {
     else if (!RANGES.includes(h.value)) throw new BlockError(`range must be closed or half-open, got "${h.value}"`);
     else range = h.value;
   });
-  if (!array || !array.length) throw new BlockError("the block needs an array: line with at least one value");
   if (!raw.length) throw new BlockError("the block has no steps (lines starting with \"- \")");
+  const rowNames = [];
+  let cur = array;
+  const held = {};
   const steps = raw.map(({ body }, s) => {
     const where = `step ${s + 1}`;
     const bar = body.indexOf("|");
     if (bar < 0) throw new BlockError(`${where}: put " | " between the pointers and the narration`);
+    const head = body.slice(0, bar).trim();
     const ptrs = {};
-    for (const pair of body.slice(0, bar).trim().split(/\s+/).filter(Boolean)) {
-      const m = /^([^=]+)=(.*)$/.exec(pair);
-      if (!m) throw new BlockError(`${where}: "${pair}" is not key=value`);
+    let rest = head;
+    for (const m of head.matchAll(TOKEN)) {
+      rest = rest.replace(m[0], "");
       const [, key, val] = m;
-      if (!POINTER_KEYS.includes(key)) throw new BlockError(`${where}: unknown pointer "${key}" (use ${POINTER_KEYS.join(" ")})`);
+      if (!NAME.test(key)) throw new BlockError(`${where}: "${key}" is not a name (letters, digits, _)`);
+      if (val.startsWith("[")) {
+        const list = items(where, key, val);
+        if (key === "array") { cur = list; continue; }
+        if (!rowNames.includes(key)) rowNames.push(key);
+        held[key] = list;
+        continue;
+      }
       if (!/^\d+$/.test(val)) throw new BlockError(`${where}: ${key}=${val} is not a cell index`);
-      const idx = Number(val);
-      if (idx > array.length) throw new BlockError(`${where}: ${key}=${idx} is past the end of the array (length ${array.length})`);
-      ptrs[key] = idx;
+      ptrs[key] = Number(val);
     }
-    return { ptrs, text: body.slice(bar + 1).trim() };
+    if (rest.trim()) throw new BlockError(`${where}: "${rest.trim()}" is not key=value`);
+    for (const [key, idx] of Object.entries(ptrs)) {
+      if (!cur) throw new BlockError(`${where}: ${key}=${idx} needs an array: line to point into`);
+      if (idx > cur.length) throw new BlockError(`${where}: ${key}=${idx} is past the end of the array (length ${cur.length})`);
+    }
+    return { ptrs, text: body.slice(bar + 1).trim(), array: cur, rows: { ...held } };
   });
-  return { title, array, range, steps };
+  if (!(array && array.length) && !rowNames.length && !steps.some((st) => st.array)) {
+    throw new BlockError("the block needs an array: line with at least one value, or a row like stack=[...]");
+  }
+  return { title, array, range, rowNames, steps };
 }
 
 export function stepCells(data, k) {
-  const { array, range } = data;
-  const ptrs = data.steps[k].ptrs;
+  const { range } = data;
+  const step = data.steps[k];
+  const array = step.array || data.array || [];
+  const ptrs = step.ptrs;
   const n = array.length;
   const ghost = Object.values(ptrs).some((v) => v === n);
   const pair = PAIRS.find(([a, b]) => a in ptrs && b in ptrs);
@@ -71,12 +99,14 @@ export function stepCells(data, k) {
   const cells = [];
   for (let idx = 0; idx < n + (ghost ? 1 : 0); idx++) {
     const state = ptrs.ans === idx ? "ans" : ptrs.mid === idx ? "mid" : outside(idx) ? "out" : "in";
+    const raw = idx < n ? array[idx] : "";
     cells.push({
-      value: idx < n ? array[idx] : "",
+      value: raw === "_" ? "" : raw,
       index: idx,
       ghost: idx === n,
+      blank: raw === "_",
       state,
-      labels: POINTER_KEYS.filter((key) => key !== "ans" && ptrs[key] === idx),
+      labels: Object.keys(ptrs).filter((key) => key !== "ans" && ptrs[key] === idx),
     });
   }
   return cells;
@@ -118,6 +148,7 @@ export function stepView(data, k) {
     nextDisabled: k >= n - 1,
     narration: data.steps[k].text,
     cells: stepCells(data, k),
+    rows: (data.rowNames || []).map((name) => ({ name, items: data.steps[k].rows?.[name] || [] })),
   };
 }
 
@@ -164,6 +195,7 @@ export function buildStepper(data, doc = globalThis.document) {
   box.setAttribute("aria-label", data.title ? `Step-through: ${data.title}` : "Step-through");
   if (data.title) box.append(inline(doc, el(doc, "div", "wtitle"), data.title));
   const arr = el(doc, "div", "arr");
+  const rows = el(doc, "div", "rows");
   const narr = el(doc, "p", "narr");
   narr.setAttribute("aria-live", "polite");
   const bar = el(doc, "div", "wbar");
@@ -172,17 +204,27 @@ export function buildStepper(data, doc = globalThis.document) {
   back.type = next.type = "button";
   const counter = el(doc, "span", "wcount");
   bar.append(back, next, counter);
-  box.append(arr, narr, bar);
+  box.append(arr, rows, narr, bar);
 
   let k = 0;
   const render = () => {
     const v = stepView(data, k);
     arr.replaceChildren(...v.cells.map((c) => {
-      const cell = el(doc, "div", `cell ${c.state}` + (c.ghost ? " ghost" : ""));
+      const cell = el(doc, "div", `cell ${c.state}` + (c.ghost ? " ghost" : "") + (c.blank ? " blank" : ""));
       cell.append(el(doc, "div", "v", c.value), el(doc, "div", "i", c.ghost ? "" : String(c.index)),
         el(doc, "div", "p", c.labels.join(" ")));
       return cell;
     }));
+    arr.hidden = !v.cells.length;
+    rows.replaceChildren(...v.rows.map((r) => {
+      const row = el(doc, "div", "row");
+      const list = el(doc, "div", "items");
+      if (r.items.length) list.append(...r.items.map((x) => el(doc, "span", "item", x)));
+      else list.append(el(doc, "span", "empty", "empty"));
+      row.append(el(doc, "span", "rname", r.name), list);
+      return row;
+    }));
+    rows.hidden = !v.rows.length;
     narr.replaceChildren();
     inline(doc, narr, v.narration);
     counter.textContent = v.counter;

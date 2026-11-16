@@ -225,6 +225,18 @@ Then it unwinds, top first:
 
 Calls go down until the base case answers. Results come back up, one frame at a time.
 
+```steps
+title: factorial(3), call by call
+- stack=[f(3)] | Call `factorial(3)`. One frame. The top of the stack is on the right.
+- stack=[f(3), f(2)] | `n` is not 0, so it calls `factorial(2)` and waits.
+- stack=[f(3), f(2), f(1)] | `factorial(1)` calls `factorial(0)` and waits.
+- stack=[f(3), f(2), f(1), f(0)] | Deepest point. `n == 0`, the base case, no more calls.
+- stack=[f(3), f(2), f(1)] | `f(0)→1`. The top frame returns 1 and is gone. `factorial(1)` computes `1 * 1`.
+- stack=[f(3), f(2)] | `f(1)→1`. `factorial(2)` computes `2 * 1`.
+- stack=[f(3)] | `f(2)→2`. `factorial(3)` computes `3 * 2`.
+- stack=[] | `f(3)→6`. The last frame returns 6 to the caller. The stack is empty.
+```
+
 ### Trust the recursive call
 
 Tracing every frame is fine for `factorial(3)` and impossible for a tree of a thousand nodes. So you don't. You write the recursive case **assuming the smaller call already returns the right answer**, and you check three things instead:

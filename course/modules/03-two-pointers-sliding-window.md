@@ -129,6 +129,25 @@ This is the same amortised argument as the monotonic stack in [02-stacks-queues.
 
 The word **"contiguous"** or **"substring"** in a statement is close to a guarantee that the window applies, provided the rule is monotone.
 
+```compare
+title: Which shape?
+option: Shape A, converging
+  Start: `lo` at the left end, `hi` at the right end
+  Moves: toward each other, one of them per step
+  Loop: `while lo < hi`
+  Needs: sorted order, a symmetry, or one side that limits the answer
+  Cost: O(n), plus O(n log n) if you had to sort
+  Signal words: sorted array, pair or triplet summing to X, palindrome
+option: Shape B, the window
+  Start: `left` and `right` both at the left end
+  Moves: both go right, `left` never moves back
+  Loop: `for right in ...` with `while <window is invalid>` inside
+  Needs: a contiguous answer and a monotone validity rule
+  Cost: O(n), `left` advances at most n times in total
+  Signal words: contiguous subarray, substring, longest or shortest run, window of size k
+```
+
+
 ## 0.3 Vocabulary
 
 | Term | Meaning |

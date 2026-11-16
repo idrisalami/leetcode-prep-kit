@@ -511,6 +511,22 @@ return dummy.next
 
 Same algorithm, one pointer, and the "don't advance after a delete" asymmetry is now *structural*: the `else` makes it impossible to get wrong. **Prefer this shape.** It also shows why `while cur.next` and not `while cur`: the body edits the link ahead of `cur`, so `cur` must always be a real node with a link ahead to inspect.
 
+```compare
+title: Dummy head: two pointers or one
+option: Two pointers: prev and cur
+  Setup: `dummy = ListNode(0, head)`, `prev = dummy`, `cur = head`
+  Loop test: `while cur:`
+  On a match: `prev.next = cur.next`, and `prev` stays put
+  On a keep: `prev = cur`
+  Return: `dummy.next`
+option: One pointer: look ahead
+  Setup: `dummy = ListNode(0, head)`, `cur = dummy`
+  Loop test: `while cur.next:`
+  On a match: `cur.next = cur.next.next`, and `cur` stays put
+  On a keep: `cur = cur.next`
+  Return: `dummy.next`
+```
+
 ### When to reach for it
 
 > **If the problem can modify the front of the list, start with a dummy. One line, no thought required.**
@@ -574,6 +590,20 @@ Read the exit off the invariant: when the loop ends, the untouched suffix is emp
 - One node: one iteration, and that node's `.next` must end as `None`.
 
 > **No guards needed. Check that before you write one**: a guard defending a state the loop already handles is dead or wrong (see [bug-checklist.md](../reference/bug-checklist.md#guards-copied-from-another-problem), §Guards copied from another problem).
+
+```steps
+title: Check your trace: reverse 1, 2, 3, 4 in place
+array: 1→2 2→3 3→4 4→∅
+- prev=4 cur=0 | Each cell is a node and the node its `.next` points at. `prev` starts as `None`, drawn as the ghost cell past the end. `cur` is the head.
+- prev=4 cur=0 nxt=1 array=[1→∅, 2→3, 3→4, 4→∅] | Save `nxt = cur.next`, which is 2. Then rewire: `cur.next = prev` points 1 at `None`. The old head now ends the list.
+- prev=0 cur=1 array=[1→∅, 2→3, 3→4, 4→∅] | Advance both: `prev = cur` is node 1, `cur = nxt` is node 2.
+- prev=0 cur=1 nxt=2 array=[1→∅, 2→1, 3→4, 4→∅] | Save 3. Rewire: 2 now points back at 1.
+- prev=1 cur=2 array=[1→∅, 2→1, 3→4, 4→∅] | Advance. The reversed prefix is 2, 1. The untouched suffix is 3, 4.
+- prev=1 cur=2 nxt=3 array=[1→∅, 2→1, 3→2, 4→∅] | Save 4. Rewire: 3 now points back at 2.
+- prev=2 cur=3 array=[1→∅, 2→1, 3→2, 4→∅] | Advance.
+- prev=2 cur=3 nxt=4 array=[1→∅, 2→1, 3→2, 4→3] | Save `None`, drawn as the ghost cell. Rewire: 4 now points back at 3.
+- prev=3 cur=4 array=[1→∅, 2→1, 3→2, 4→3] | Advance. `cur` is `None`, so the loop ends. `prev` is the last node reached, node 4, and it is the new head. Return `prev`, not `head`.
+```
 
 ### Reversing part of a list
 
@@ -667,6 +697,18 @@ Written in the other order, `while fast.next and fast`, it raises `AttributeErro
 | `[1,2,3,4]` | **3** | the **second** of the two middles |
 | `[1,2]` | **2** | the second node |
 | `[1]` | **1** | the loop never runs |
+
+```steps
+title: Which middle? Trace both parities
+array: 1 2 3
+- slow=0 fast=0 | List `[1,2,3]`, odd length. The loop is `while fast and fast.next`. Both pointers start on the head.
+- slow=1 fast=2 | `fast` and `fast.next` both exist, so the body runs: `slow` moves one node, `fast` moves two.
+- slow=1 fast=2 | `fast` is the last node and `fast.next` is `None`, so the loop stops. `slow` is on 2, the middle.
+- slow=0 fast=0 array=[1, 2, 3, 4] | Now the even list `[1,2,3,4]`. Both pointers start on the head.
+- slow=1 fast=2 | The body runs once: `slow` is on 2, `fast` is on 3.
+- slow=2 fast=4 | The body runs again: `slow` is on 3, `fast` steps past the end to `None`, the ghost cell.
+- slow=2 fast=4 | `fast` is `None`, so the loop stops. `slow` is on 3, the upper of the two middles.
+```
 
 **On an even list there are two middles, and this loop gives you the upper one.** Problems disagree about which they want, and the difference is invisible until you trace `[1,2,3,4]`.
 

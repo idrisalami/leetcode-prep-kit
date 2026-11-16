@@ -4,13 +4,11 @@
 
 You work through the course in a local web app. An AI coach (Claude Code or OpenAI Codex, running on your own account) sets up your plan, marks your answers, reviews your code and keeps your notes. It won't write your solutions unless you ask for one.
 
-<p align="center">
-  <a href="https://idrisalami.github.io/leetcode-prep-kit/">
-    <img src="docs/overview.png" alt="Watch the 3-minute overview" width="760">
-  </a>
-  <br>
-  <a href="https://idrisalami.github.io/leetcode-prep-kit/"><b>▶ Watch the 3-minute overview</b></a>
-</p>
+### ▶ LeetCode Prep Kit: 3-minute overview
+
+https://github.com/user-attachments/assets/fbd07f74-c100-498b-b87e-edc9c2e35541
+
+Video not playing? [Watch it on the web page](https://idrisalami.github.io/leetcode-prep-kit/).
 
 If you already have the folder, the same video is at `docs/overview.mp4`.
 

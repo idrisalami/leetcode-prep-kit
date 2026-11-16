@@ -374,6 +374,26 @@ tree:        1                 pre :  1 | 2 4 5 | 3 6 7
 
 This is the fact that makes reconstruction by **index ranges** work, with no slicing and no membership tests — see LC 105 (construct a tree from pre-order and in-order).
 
+```compare
+title: Pre, in or post-order?
+option: Pre-order
+  Node is processed: before its children
+  Order on the 7-node tree: `1 2 4 5 3 6 7`
+  Classic use: build top-down, hand context to the children
+  Code line: `visit(node)` comes first, before both calls
+option: In-order
+  Node is processed: between its two children
+  Order on the 7-node tree: `4 2 5 1 6 3 7`
+  Classic use: sorted output on a BST, a `prev` variable
+  Code line: `visit(node)` sits between the two calls
+option: Post-order
+  Node is processed: after its children
+  Order on the 7-node tree: `4 5 2 6 7 3 1`
+  Classic use: height, diameter, subtree sums
+  Code line: `visit(node)` comes last, after both calls
+```
+
+
 #### Which pairs rebuild the tree
 
 With distinct values:
@@ -661,6 +681,20 @@ The clearest demonstration that **the frontier's discipline is the algorithm**. 
 
 Look at step 2: node 2 is served and its children 4, 5 are appended *behind* node 3. They wait, because 3 arrived first. **That waiting is what keeps the traversal flat.**
 
+```steps
+title: BFS on the 7-node tree (queue front on the left)
+array: 1 2 3 4 5 6 7
+- queue=[1] visited=[] | Start with the root in the queue. The front is on the left.
+- i=0 queue=[2, 3] visited=[1] | `popleft()` gives 1. Append its children 2, 3 at the back.
+- i=1 queue=[3, 4, 5] visited=[1, 2] | `popleft()` gives 2. Its children 4, 5 go behind 3.
+- i=2 queue=[4, 5, 6, 7] visited=[1, 2, 3] | `popleft()` gives 3. Its children 6, 7 go at the back.
+- i=3 queue=[5, 6, 7] visited=[1, 2, 3, 4] | `popleft()` gives 4. No children to add.
+- i=4 queue=[6, 7] visited=[1, 2, 3, 4, 5] | `popleft()` gives 5. No children.
+- i=5 queue=[7] visited=[1, 2, 3, 4, 5, 6] | `popleft()` gives 6. No children.
+- i=6 queue=[] visited=[1, 2, 3, 4, 5, 6, 7] | `popleft()` gives 7. The queue is empty, so the loop ends. Depths never decrease.
+```
+
+
 ### LIFO — `pop()`, newest first
 
 | Frontier | Serve | Add | Depth served |
@@ -676,6 +710,20 @@ Look at step 2: node 2 is served and its children 4, 5 are appended *behind* nod
 **Order: 1, 3, 7, 6, 2, 5, 4.** Depths: 0, 1, 2, 2, 1, 2, 2 — **bounces up and down**.
 
 Node 2 sat untouched for four steps while the entire right subtree was explored. It was the *oldest* item, and LIFO always ignores the oldest.
+
+```steps
+title: Stack version on the same tree (top on the right)
+array: 1 2 3 4 5 6 7
+- stack=[1] visited=[] | Start with the root on the stack. The top is on the right.
+- i=0 stack=[2, 3] visited=[1] | `pop()` gives 1. Push its children 2, then 3.
+- i=2 stack=[2, 6, 7] visited=[1, 3] | `pop()` gives 3, the newest. Push 6, then 7.
+- i=6 stack=[2, 6] visited=[1, 3, 7] | `pop()` gives 7. No children.
+- i=5 stack=[2] visited=[1, 3, 7, 6] | `pop()` gives 6. No children.
+- i=1 stack=[4, 5] visited=[1, 3, 7, 6, 2] | `pop()` gives 2, the oldest, after four steps. Push 4, then 5.
+- i=4 stack=[4] visited=[1, 3, 7, 6, 2, 5] | `pop()` gives 5. No children.
+- i=3 stack=[] visited=[1, 3, 7, 6, 2, 5, 4] | `pop()` gives 4. The depths bounce up and down.
+```
+
 
 ### Push order matters only for stacks
 
