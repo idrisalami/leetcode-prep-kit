@@ -8,3 +8,4 @@ __pycache__/
 my-prep/
 .approval_tests_temp/
 .pytest_cache/
+.superpowers/
