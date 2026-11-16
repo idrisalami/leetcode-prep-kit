@@ -570,7 +570,8 @@ ul.plain li:last-child { margin-bottom: 0; }
 .lesson .stepper .cell .i { font-size: 11px; color: var(--text-3); height: 15px; }
 .lesson .stepper .cell .p { height: 17px; font-size: 11px; font-weight: 800; color: var(--accent); }
 .lesson .stepper .cell.blank .v { border-style: dashed; }
-.lesson .stepper .rows { display: grid; grid-template-columns: max-content 1fr; gap: 6px 12px; align-items: center; margin: 4px 0 8px; }
+.lesson .stepper .rows { display: flex; flex-wrap: wrap; gap: 6px 12px; margin: 4px 0 8px; }
+.lesson .stepper .row { min-width: 0; }
 .lesson .stepper .rows[hidden], .lesson .stepper .arr[hidden] { display: none; }
 .lesson .stepper .rname { font: 700 12px var(--mono); color: var(--text-3); }
 .lesson .stepper .items { display: flex; flex-wrap: wrap; gap: 6px; min-height: 30px; align-items: center; }
