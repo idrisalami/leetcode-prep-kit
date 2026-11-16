@@ -676,6 +676,19 @@ def nextGreaterElement(nums1, nums2):
     return [nxt.get(v, -1) for v in nums1]
 ```
 
+```steps
+title: Next Greater Element I: the monotonic stack
+array: 2 1 4 3
+- i=0 stack=[] nxt=[] | `nums2` is `[2, 1, 4, 3]`. This code pushes values, not indices. The top of the stack is on the right.
+- i=0 stack=[2] | The stack is empty, so nothing pops. Push 2.
+- i=1 stack=[2, 1] | 2 is not less than 1, so the `while` stops at once. Push 1.
+- i=2 stack=[2] nxt=[1→4] | 4 is greater than the top, 1. Pop 1: its next greater element is 4.
+- i=2 stack=[] nxt=[1→4, 2→4] | 4 is greater than 2 too. Pop 2: its next greater element is 4. The stack is empty, so the `while` stops.
+- i=2 stack=[4] nxt=[1→4, 2→4] | Push 4.
+- i=3 stack=[4, 3] nxt=[1→4, 2→4] | 4 is not less than 3, so nothing pops. Push 3.
+- i=3 stack=[4, 3] nxt=[1→4, 2→4] | The loop ends. 4 and 3 were never popped, so they have no entry in `nxt`. `nxt.get(v, -1)` gives them −1.
+```
+
 **This one pushes values, not indices, and it's the exception that proves the rule.** The values are guaranteed distinct, so a value identifies an element uniquely; and the answer is a value, not a distance, so no position is ever needed. **Both conditions have to hold.** Drop either one and this breaks. A problem that asks *how far* to the answer needs indices, whatever else it says.
 
 **The full sentence, delivered:**
@@ -753,6 +766,22 @@ A `deque` *works* as a stack, and `append` with `pop` on it is O(1) too. But a s
 | **newest** unfinished item | stack | `list`: `append`, `pop()` | this module |
 | **oldest** unfinished item | queue | `deque`: `append`, `popleft()` | this module; breadth-first search is a queue |
 | **smallest** item, whenever it arrived | heap | `heapq`: `heappush`, `heappop` | later, module 10 |
+
+```compare
+title: Which item comes out
+option: Stack (LIFO)
+  Hands back: the newest item
+  Add at: the right end
+  Remove from: the right end
+  Python: `list` with `append` and `pop()`
+  Drives: the monotonic stack and bracket matching
+option: Queue (FIFO)
+  Hands back: the oldest item
+  Add at: the right end
+  Remove from: the left end
+  Python: `deque` with `append` and `popleft()`
+  Drives: breadth-first search and Dota2 Senate
+```
 
 You'll see the queue again in module 06 ([06-trees.md](06-trees.md)), where it is the frontier of every breadth-first search, and the heap comes back in module 10 ([10-heaps.md](10-heaps.md)). Swapping the stack for a queue in the same loop is the whole difference between depth-first and breadth-first.
 
