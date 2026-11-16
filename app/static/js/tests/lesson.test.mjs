@@ -146,3 +146,33 @@ test("cellBadge pills plain and bold Big-O cells, nothing else", () => {
   assert.equal(cellBadge("O(n)", ["strong", "em"]), null);
   assert.equal(cellBadge("O(n)", ["a"]), null);
 });
+
+import { isSelfCheckHeading, markText, cleanResults, recordResult } from "../lesson.js";
+
+test("isSelfCheckHeading: the questions h2, numbered or not, never the answers h2", () => {
+  assert.equal(isSelfCheckHeading("0.9 Self-check"), true);
+  assert.equal(isSelfCheckHeading("  Self-check "), true);
+  assert.equal(isSelfCheckHeading("Self-check answers"), false);
+  assert.equal(isSelfCheckHeading("0.8 Complexity"), false);
+});
+
+test("markText: the small mark on a card's front", () => {
+  assert.equal(markText("got"), "✓ got");
+  assert.equal(markText("missed"), "✗ missed");
+  assert.equal(markText(undefined), "");
+});
+
+test("cleanResults keeps only known values for cards that exist", () => {
+  assert.deepEqual(cleanResults({ 0: "got", 1: "missed", 2: "maybe", 9: "got" }, 3), { 0: "got", 1: "missed" });
+  assert.deepEqual(cleanResults(null, 3), {});
+  assert.deepEqual(cleanResults(["got"], 3), {});
+  assert.deepEqual(cleanResults("got", 3), {});
+});
+
+test("recordResult overwrites one card and leaves the input alone", () => {
+  const before = { 0: "got" };
+  const after = recordResult(before, 0, "missed");
+  assert.deepEqual(after, { 0: "missed" });
+  assert.deepEqual(before, { 0: "got" });
+  assert.deepEqual(recordResult(after, 2, "got"), { 0: "missed", 2: "got" });
+});

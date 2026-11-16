@@ -586,6 +586,41 @@ ul.plain li:last-child { margin-bottom: 0; }
     --cell-mid-line: #8b80f0; --cell-mid-bg: #2a2550; --cell-mid-ink: #b3abf5; }
 }
 
+/* Flip-card self-check from lesson.js: the §0.9 questions on fronts, the answers on backs. */
+.lesson { --flip-f-bg: #fff6e0; --flip-f-line: #e3c25a; --flip-b-bg: #e2f3df; --flip-b-line: #9fd19a; }
+.lesson .flip-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; margin: 16px 0 22px; align-items: stretch; }
+.lesson .flip-tally { grid-column: 1 / -1; display: flex; gap: 12px; align-items: baseline; font-size: 13px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.lesson button.link { border: 0; background: none; padding: 0; font: inherit; color: var(--link); cursor: pointer; }
+.lesson button.link:hover { text-decoration: underline; }
+.lesson .flip { display: grid; perspective: 1200px; cursor: pointer; border-radius: 12px; }
+.lesson .flip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.lesson .flip-in { display: grid; transition: transform .45s ease; transform-style: preserve-3d; }
+.lesson .flip.open .flip-in { transform: rotateY(180deg); }
+.lesson .flip-f, .lesson .flip-b { grid-area: 1 / 1; border: 1px solid; border-radius: 12px; padding: 12px 14px;
+  backface-visibility: hidden; -webkit-backface-visibility: hidden; font-size: 14px; min-width: 0; }
+.lesson .flip-f { background: var(--flip-f-bg); border-color: var(--flip-f-line); }
+.lesson .flip-b { background: var(--flip-b-bg); border-color: var(--flip-b-line); transform: rotateY(180deg); cursor: auto; }
+.lesson .flip-head { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; font-weight: 800;
+  letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); margin-bottom: 6px; }
+.lesson .flip-mark { text-transform: none; letter-spacing: 0; font-size: 12px; }
+.lesson .flip-mark.got { color: var(--lvl-easy-ink); }
+.lesson .flip-mark.missed { color: var(--lvl-hard-ink); }
+.lesson .flip-body > :first-child { margin-top: 0; }
+.lesson .flip-body > :last-child { margin-bottom: 0; }
+.lesson .flip-body pre { overflow-x: auto; }
+.lesson .flip-acts { display: flex; gap: 8px; margin-top: 10px; }
+.lesson .flip-acts .btn[aria-pressed="true"] { border-color: var(--accent); font-weight: 700; }
+@media (prefers-reduced-motion: reduce) {
+  .lesson .flip-in, .lesson .flip.open .flip-in { transform: none; }
+  .lesson .flip-b { transform: none; visibility: hidden; }
+  .lesson .flip.open .flip-f { visibility: hidden; }
+  .lesson .flip.open .flip-b { visibility: visible; }
+}
+@media (prefers-color-scheme: dark) {
+  .lesson { --flip-f-bg: var(--lvl-medium-bg); --flip-f-line: var(--lvl-medium-line);
+    --flip-b-bg: var(--lvl-easy-bg); --flip-b-line: var(--lvl-easy-line); }
+}
+
 /* ---- welcome ------------------------------------------------------------------ */
 /* #/welcome: what the app is, then one card per coach tool the server looked for. */
 

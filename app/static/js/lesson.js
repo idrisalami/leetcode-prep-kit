@@ -65,6 +65,30 @@ export function tallyText(results, total) {
   return `${got} of ${total} got` + (missed ? ` · ${missed} missed` : "");
 }
 
+/** The questions h2: "0.9 Self-check" on numbered modules, plain "Self-check" on module 00. */
+export function isSelfCheckHeading(text) {
+  return /^(0\.\d+\s+)?self-check$/i.test(String(text).trim());
+}
+
+export function markText(result) {
+  return result === "got" ? "✓ got" : result === "missed" ? "✗ missed" : "";
+}
+
+/** Stored results, keeping only "got"/"missed" for cards that exist (the list may have shrunk). */
+export function cleanResults(raw, count) {
+  const out = {};
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
+  for (const [k, v] of Object.entries(raw)) {
+    const i = Number(k);
+    if (Number.isInteger(i) && i >= 0 && i < count && (v === "got" || v === "missed")) out[i] = v;
+  }
+  return out;
+}
+
+export function recordResult(results, index, value) {
+  return { ...results, [index]: value };
+}
+
 export function progressLine({ read, total, drills }) {
   return `${read} of ${total} sections read` + (drills ? ` · ${drills.solved}/${drills.count} drills` : "");
 }
@@ -268,6 +292,130 @@ function enrichBadges(root) {
   }
 }
 
+const ANSWERS_H2 = /^self-check answers$/i;
+
+/** The first <ol> directly under the h2 whose text passes `test`, before the next h2. */
+function sectionList(root, test) {
+  for (const h2 of root.querySelectorAll("h2")) {
+    if (!test(h2.textContent)) continue;
+    for (let n = h2.nextElementSibling; n && n.localName !== "h2"; n = n.nextElementSibling) {
+      if (n.localName === "ol") return { found: true, ol: n };
+    }
+    return { found: true, ol: null };
+  }
+  return { found: false, ol: null };
+}
+
+function items(ol) {
+  return ol ? Array.from(ol.children).filter((n) => n.localName === "li") : [];
+}
+
+function cloneKids(doc, from, into) {
+  for (const n of Array.from(from.childNodes)) into.append(n.cloneNode(true));
+  return into;
+}
+
+function enrichSelfCheck(root, doc, path) {
+  const q = sectionList(root, isSelfCheckHeading);
+  const a = sectionList(root, (t) => ANSWERS_H2.test(String(t).trim()));
+  if (!q.found && !a.found) return; // no self-check on this page at all
+  const qs = items(q.ol);
+  const as = items(a.ol);
+  const pairs = pairSelfCheck(qs, as);
+  if (!pairs) {
+    console.warn(`self-check: ${qs.length} questions, ${as.length} answers`);
+    return;
+  }
+  const key = "prep:selfcheck:" + path;
+  let results = cleanResults(load(key, {}), pairs.length);
+  const start = Number(q.ol.getAttribute("start")) || 1;
+
+  const grid = el(doc, "div", "flip-grid");
+  const tally = el(doc, "div", "flip-tally");
+  const tallyLine = el(doc, "span", "flip-tally-text");
+  const reset = el(doc, "button", "link", "Reset");
+  reset.type = "button";
+  tally.append(tallyLine, reset);
+  const live = el(doc, "div", "sr-only");
+  live.setAttribute("aria-live", "polite");
+  grid.append(tally);
+
+  const cards = pairs.map(([qi, ai], i) => {
+    const card = el(doc, "div", "flip");
+    card.setAttribute("role", "button");
+    card.setAttribute("tabindex", "0");
+    card.setAttribute("aria-label", `Question ${start + i}: show the answer`);
+    const inner = el(doc, "div", "flip-in");
+    const front = el(doc, "div", "flip-f");
+    const head = el(doc, "div", "flip-head");
+    const mark = el(doc, "span", "flip-mark");
+    head.append(el(doc, "span", "flip-num", `Q${start + i}`), mark);
+    front.append(head, cloneKids(doc, qi, el(doc, "div", "flip-body")));
+    const back = el(doc, "div", "flip-b");
+    const acts = el(doc, "div", "flip-acts");
+    const got = el(doc, "button", "btn btn-sm flip-got", "Got it");
+    const missed = el(doc, "button", "btn btn-sm flip-missed", "Missed it");
+    got.type = missed.type = "button";
+    acts.append(got, missed);
+    back.append(el(doc, "div", "flip-head", `Answer ${start + i}`), cloneKids(doc, ai, el(doc, "div", "flip-body")), acts);
+    inner.append(front, back);
+    card.append(inner);
+
+    const setOpen = (open) => {
+      card.classList.toggle("open", open);
+      back.setAttribute("aria-hidden", String(!open));
+      back.inert = !open;
+      front.setAttribute("aria-hidden", String(open));
+      card.setAttribute("aria-label", `Question ${start + i}: ${open ? "show the question" : "show the answer"}`);
+      live.textContent = open ? "Answer shown" : "Question shown";
+    };
+    back.setAttribute("aria-hidden", "true");
+    back.inert = true;
+    card.addEventListener("click", (e) => {
+      if (e.target.closest("a, button")) return;
+      setOpen(!card.classList.contains("open"));
+    });
+    card.addEventListener("keydown", (e) => {
+      if (e.target !== card || (e.key !== "Enter" && e.key !== " ")) return;
+      e.preventDefault();
+      setOpen(!card.classList.contains("open"));
+    });
+    const record = (value) => (e) => {
+      e.stopPropagation();
+      results = recordResult(results, i, value);
+      store(key, results);
+      draw();
+      setOpen(false);
+      card.focus();
+    };
+    got.addEventListener("click", record("got"));
+    missed.addEventListener("click", record("missed"));
+    grid.append(card);
+    return { card, mark, got, missed };
+  });
+
+  function draw() {
+    tallyLine.textContent = tallyText(results, pairs.length);
+    reset.hidden = !Object.keys(results).length;
+    cards.forEach(({ card, mark, got, missed }, i) => {
+      const r = results[i];
+      mark.textContent = markText(r);
+      mark.className = "flip-mark" + (r ? ` ${r}` : "");
+      card.dataset.result = r || "";
+      got.setAttribute("aria-pressed", String(r === "got"));
+      missed.setAttribute("aria-pressed", String(r === "missed"));
+    });
+  }
+  reset.addEventListener("click", () => {
+    results = {};
+    store(key, results);
+    draw();
+  });
+  grid.append(live);
+  draw();
+  q.ol.replaceWith(grid);
+}
+
 /** Post-process a rendered lesson in place. Each rule is isolated: a failure warns and the page keeps going. */
 export function enrichLesson(root, { path = "", isModule = false } = {}) {
   const doc = root.ownerDocument;
@@ -275,6 +423,7 @@ export function enrichLesson(root, { path = "", isModule = false } = {}) {
     ["widgets", () => {
       for (const code of root.querySelectorAll("pre > code.language-steps, pre > code.language-compare")) widgetFor(code);
     }],
+    ["self-check", () => { if (isModule) enrichSelfCheck(root, doc, path); }],
     ["callouts", () => enrichCallouts(root, doc)],
     ["how to play", () => enrichHowToPlay(root, doc)],
     ["lead", () => enrichLead(root)],
