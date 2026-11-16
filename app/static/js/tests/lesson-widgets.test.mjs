@@ -87,7 +87,7 @@ test("parseSteps errors", () => {
     ["array: 1 2\n", /no steps/],
     ["array: 1 2\n- lo=0 hi=3 | x", /past the end/], // 3 > len 2
     ["array: 1 2\n- lo=x | x", /lo/], // not an integer
-    ["array: 1 2\n- low=0 | x", /unknown pointer "low"/],
+    ["array: 1 2\n- low=x | x", /not a cell index/],
     ["array: 1 2\n- lo=0", /\|/], // no narration separator
   ]) assert.throws(() => parseSteps(src), (e) => e instanceof BlockError && msg.test(e.message), src);
 });
@@ -141,4 +141,62 @@ test("inlineSegments splits backticked code out of a value", () => {
     { code: true, text: "a" }, { code: false, text: " and " }, { code: true, text: "b" },
   ]);
   assert.deepEqual(inlineSegments("a lone ` tick"), [{ code: false, text: "a lone ` tick" }]);
+});
+
+// ---- the upgrade: any pointer name, rows that change per step, per-step array values ----
+
+test("any identifier is a pointer, labels keep the written order", () => {
+  const d = parseSteps("array: 1 2 3 4 5\n- curr=1 prev=0 | x\n- slow=2 fast=2 | y");
+  assert.deepEqual(d.steps[0].ptrs, { curr: 1, prev: 0 });
+  const c = stepCells(d, 0);
+  assert.deepEqual(c[0].labels, ["prev"]);
+  assert.deepEqual(c[1].labels, ["curr"]);
+  assert.deepEqual(stepCells(d, 1)[2].labels, ["slow", "fast"]);
+  assert.ok(c.every((x) => x.state === "in"));
+});
+
+const ROWS = `array: 2 1 3
+- i=0 stack=[] | a
+- i=1 stack=[2] | b
+- i=2 | c
+- seen=[a:1, b] stack=[3, f(2)] | d
+`;
+
+test("rows: bracket values, carried forward, listed in first-appearance order", () => {
+  const d = parseSteps(ROWS);
+  assert.deepEqual(d.rowNames, ["stack", "seen"]);
+  assert.deepEqual(stepView(d, 0).rows, [{ name: "stack", items: [] }, { name: "seen", items: [] }]);
+  assert.deepEqual(stepView(d, 1).rows[0].items, ["2"]);
+  assert.deepEqual(stepView(d, 2).rows[0].items, ["2"]); // omitted: carries forward
+  assert.deepEqual(stepView(d, 3).rows, [{ name: "stack", items: ["3", "f(2)"] }, { name: "seen", items: ["a:1", "b"] }]);
+  assert.deepEqual(d.steps[3].ptrs, {});
+});
+
+test("a block with rows needs no array", () => {
+  const d = parseSteps("title: calls\n- stack=[fact(3)] | x\n- stack=[fact(3), fact(2)] | y");
+  assert.deepEqual(stepView(d, 0).cells, []);
+  assert.deepEqual(stepView(d, 1).rows, [{ name: "stack", items: ["fact(3)", "fact(2)"] }]);
+});
+
+test("array=[...] replaces the values from that step on; _ is a blank cell", () => {
+  const d = parseSteps("array: _ _ _\n- i=0 array=[1, _, _] | a\n- i=1 | b\n- array=[1, 2, 3, 4] i=3 | c");
+  const c0 = stepCells(d, 0);
+  assert.equal(c0[0].value, "1");
+  assert.equal(c0[1].value, "");
+  assert.equal(c0[1].blank, true);
+  assert.equal(c0[0].blank, false);
+  assert.equal(stepCells(d, 1)[0].value, "1"); // carried forward
+  const c2 = stepCells(d, 2);
+  assert.equal(c2.length, 4);
+  assert.deepEqual(c2[3].labels, ["i"]);
+  assert.equal(c2[3].value, "4");
+});
+
+test("upgrade errors", () => {
+  for (const [src, msg] of [
+    ["array: 1 2\n- array=[1] i=2 | x", /past the end/], // checked against that step's array
+    ["- stack=[1] i=0 | x", /array/], // a pointer with no array to point into
+    ["array: 1 2\n- stack=[1 | x", /\]/], // unclosed bracket
+    ["array: 1 2\n- 2x=0 | x", /2x/], // not a name
+  ]) assert.throws(() => parseSteps(src), (e) => e instanceof BlockError && msg.test(e.message), src);
 });

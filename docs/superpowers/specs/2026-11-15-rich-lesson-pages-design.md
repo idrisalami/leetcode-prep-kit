@@ -194,6 +194,30 @@ closed by default. **My call** on the default.
 Controls: Back, Next, "Step k of N", and the left/right arrow keys when the widget
 has focus. No autoplay.
 
+**Amendment (more demos, 2026-11-15). My call.** The fixed key set could not show a
+stack, a queue, a dp table filling in, or `prev`/`curr`. The stepper now also reads:
+
+| In a step | Meaning |
+|---|---|
+| `name=3` (any name: `prev`, `curr`, `slow`, `fast`, `top`) | Pointer label under cell 3. `mid` and `ans` keep their cell states; labels keep the written order. |
+| `name=[a, b, c]` | A row named `name` under the array, items left to right. `name=[]` empties it. A step that omits the row keeps the last value. Rows show in first-appearance order. |
+| `array=[1, 2, _]` | Replaces the array's values from this step on (the array may grow or shrink). |
+| `_` as a value | A blank cell (dashed outline), for a table not filled in yet. |
+
+A block with at least one row needs no `array:` line (the call-stack demo has no
+array). Items may contain spaces but not `,` or `]`. A stack row puts the top on the
+right; a queue row puts the front on the left; narration should say so once.
+
+```steps
+title: Next greater element
+array: 2 1 3
+- i=0 stack=[] | Start with an empty stack. The top is on the right.
+- i=0 stack=[2] | Nothing on the stack to pop. Push 2.
+- i=1 stack=[2, 1] | 1 is not greater than the top, 2. Push 1.
+- i=2 stack=[2, 1] | 3 is greater than the top, 1: the answer for 1 is 3. Pop.
+- i=2 stack=[3] | 3 is greater than 2 too. Pop it, then push 3.
+```
+
 ### 6.2 `compare`: the toggle
 
 ````

@@ -569,6 +569,13 @@ ul.plain li:last-child { margin-bottom: 0; }
 .lesson .stepper .cell.ghost .v { border-style: dashed; border-color: var(--line); background: none; }
 .lesson .stepper .cell .i { font-size: 11px; color: var(--text-3); height: 15px; }
 .lesson .stepper .cell .p { height: 17px; font-size: 11px; font-weight: 800; color: var(--accent); }
+.lesson .stepper .cell.blank .v { border-style: dashed; }
+.lesson .stepper .rows { display: grid; grid-template-columns: max-content 1fr; gap: 6px 12px; align-items: center; margin: 4px 0 8px; }
+.lesson .stepper .rows[hidden], .lesson .stepper .arr[hidden] { display: none; }
+.lesson .stepper .rname { font: 700 12px var(--mono); color: var(--text-3); }
+.lesson .stepper .items { display: flex; flex-wrap: wrap; gap: 6px; min-height: 30px; align-items: center; }
+.lesson .stepper .item { border: 2px solid var(--cell-line); background: var(--w-sub); border-radius: 8px; padding: 3px 9px; font: 700 13px var(--mono); }
+.lesson .stepper .empty { font-size: 13px; color: var(--text-3); font-style: italic; }
 .lesson .stepper .narr { font-size: 14px; min-height: 44px; background: var(--w-sub); border-radius: 8px; padding: 8px 12px; margin: 6px 0 0; }
 .lesson .stepper .wbar { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
 .lesson .stepper .wcount { margin-left: auto; font-size: 13px; color: var(--text-3); font-variant-numeric: tabular-nums; }
