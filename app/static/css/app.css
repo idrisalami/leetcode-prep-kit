@@ -551,6 +551,41 @@ ul.plain li:last-child { margin-bottom: 0; }
   .lesson .md .call-trap { border-color: var(--warn); }
 }
 
+/* Widgets from lesson-widgets.js: ```steps (stepper) and ```compare (segmented switch). */
+.lesson { --w-bg: var(--surface); --w-sub: #f7f6f2; --w-seg: #ecebe6; --w-seg-on: #ffffff;
+  --cell-line: #c9d9ee; --cell-out-bg: #ecebe6; --cell-out-line: #e3e1da; --cell-out-ink: #b5b3ab;
+  --cell-mid-line: #5b4fd6; --cell-mid-bg: #ece9fd; --cell-mid-ink: #3b2fb0; }
+.lesson .widget { border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; margin: 18px 0; background: var(--w-bg); }
+.lesson .widget:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.lesson .widget .wtitle { font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); margin-bottom: 10px; }
+.lesson .widget .wtitle code { text-transform: none; letter-spacing: 0; }
+.lesson .stepper .arr { display: flex; gap: 6px; margin: 4px 0 8px; }
+.lesson .stepper .cell { flex: 0 1 64px; min-width: 0; text-align: center; }
+.lesson .stepper .cell .v { border: 2px solid var(--cell-line); background: var(--w-bg); border-radius: 8px; padding: 7px 0;
+  min-height: 1.5em; font: 700 14px var(--mono); transition: background .25s, border-color .25s, color .25s; }
+.lesson .stepper .cell.out .v { background: var(--cell-out-bg); border-color: var(--cell-out-line); color: var(--cell-out-ink); }
+.lesson .stepper .cell.mid .v { border-color: var(--cell-mid-line); background: var(--cell-mid-bg); color: var(--cell-mid-ink); }
+.lesson .stepper .cell.ans .v { border-color: var(--good); background: var(--lvl-easy-bg); color: var(--lvl-easy-ink); }
+.lesson .stepper .cell.ghost .v { border-style: dashed; border-color: var(--line); background: none; }
+.lesson .stepper .cell .i { font-size: 11px; color: var(--text-3); height: 15px; }
+.lesson .stepper .cell .p { height: 17px; font-size: 11px; font-weight: 800; color: var(--accent); }
+.lesson .stepper .narr { font-size: 14px; min-height: 44px; background: var(--w-sub); border-radius: 8px; padding: 8px 12px; margin: 6px 0 0; }
+.lesson .stepper .wbar { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+.lesson .stepper .wcount { margin-left: auto; font-size: 13px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.lesson .compare .seg { display: inline-flex; flex-wrap: wrap; background: var(--w-seg); border-radius: 10px; padding: 3px; margin-bottom: 12px; }
+.lesson .compare .seg button { border: 0; background: none; padding: 6px 12px; border-radius: 8px; font: 700 13px var(--font); color: var(--text-2); cursor: pointer; }
+.lesson .compare .seg button.on { background: var(--w-seg-on); color: var(--text); box-shadow: 0 1px 3px rgba(0, 0, 0, .12); }
+.lesson .compare dl { display: grid; grid-template-columns: 120px 1fr; gap: 6px 14px; margin: 0; font-size: 14px; }
+.lesson .compare dt { color: var(--text-3); }
+.lesson .compare dd { margin: 0; }
+.lesson .md .widget-note { margin: -6px 0 16px; font-size: 13px; color: var(--text-3); font-style: italic; }
+@media (max-width: 560px) { .lesson .compare dl { grid-template-columns: 1fr; gap: 2px; } .lesson .compare dd { margin-bottom: 8px; } }
+@media (prefers-color-scheme: dark) {
+  .lesson { --w-sub: #222220; --w-seg: #2a2a27; --w-seg-on: #3a3a36;
+    --cell-line: #2f4a6b; --cell-out-bg: #222220; --cell-out-line: #2e2e2b; --cell-out-ink: #5f5e58;
+    --cell-mid-line: #8b80f0; --cell-mid-bg: #2a2550; --cell-mid-ink: #b3abf5; }
+}
+
 /* ---- welcome ------------------------------------------------------------------ */
 /* #/welcome: what the app is, then one card per coach tool the server looked for. */
 

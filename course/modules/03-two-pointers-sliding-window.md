@@ -83,6 +83,15 @@ while lo < hi:
     hi -= 1             # one of them, based on the decision
 ```
 
+```steps
+title: Pair sum on a sorted array, target 10
+array: 1 2 4 6 8 11
+- lo=0 hi=5 | Start at both ends.
+- lo=0 hi=5 | 1 + 11 = 12 > 10: 11 is too big for any partner left. hi -= 1.
+- lo=0 hi=4 | 1 + 8 = 9 < 10: 1 is too small for any partner left. lo += 1.
+- lo=1 hi=4 | 2 + 8 = 10: found the pair (1, 4).
+```
+
 **Why it works.** Think of every pair `(lo, hi)` as a cell in an n × n grid. The brute force visits every cell. Converging pointers visit one cell per step, and each step **rules out a whole row or column** of the grid at once. On a sorted array looking for two values that add to a target: if `nums[lo] + nums[hi]` is too small, then `nums[lo]` paired with *anything* is too small, because `nums[hi]` was the largest partner still available. So `lo` is finished, and you discard it in one comparison.
 
 **It needs an order, or a symmetry.** The discard argument only holds when the array is sorted, or when the property is symmetric from the two ends, like a palindrome, or when one side provably limits the answer, like the shorter of two walls. Without one of those, moving a pointer throws away pairs you never checked.

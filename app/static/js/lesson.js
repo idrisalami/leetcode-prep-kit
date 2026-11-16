@@ -1,3 +1,5 @@
+import { widgetFor } from "./lesson-widgets.js";
+
 // Lesson pages: pure classifiers (callouts, Big-O, reading time, self-check,
 // progress) and safe localStorage helpers. The DOM pass builds on these.
 
@@ -270,6 +272,9 @@ function enrichBadges(root) {
 export function enrichLesson(root, { path = "", isModule = false } = {}) {
   const doc = root.ownerDocument;
   const rules = [
+    ["widgets", () => {
+      for (const code of root.querySelectorAll("pre > code.language-steps, pre > code.language-compare")) widgetFor(code);
+    }],
     ["callouts", () => enrichCallouts(root, doc)],
     ["how to play", () => enrichHowToPlay(root, doc)],
     ["lead", () => enrichLead(root)],

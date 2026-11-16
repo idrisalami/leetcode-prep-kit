@@ -108,3 +108,37 @@ test("parseCompare errors", () => {
     (e) => e instanceof BlockError && /four/.test(e.message));
   assert.throws(() => parseCompare("  A: b\n" + opt(1) + opt(2)), (e) => e instanceof BlockError);
 });
+
+import { stepView, nextStep, inlineSegments } from "../lesson-widgets.js";
+
+test("stepView: counter, button states and narration at each end", () => {
+  const d = parseSteps(LOWER_BOUND);
+  const first = stepView(d, 0);
+  assert.equal(first.counter, "Step 1 of 5");
+  assert.equal(first.backDisabled, true);
+  assert.equal(first.nextDisabled, false);
+  assert.equal(first.narration, "Start: the boundary is somewhere in [0, 7).");
+  assert.equal(first.cells.length, 8); // 7 cells plus the ghost for hi=7
+  const last = stepView(d, 4);
+  assert.equal(last.counter, "Step 5 of 5");
+  assert.equal(last.backDisabled, false);
+  assert.equal(last.nextDisabled, true);
+});
+
+test("nextStep clamps to the first and last step", () => {
+  assert.equal(nextStep(0, -1, 5), 0);
+  assert.equal(nextStep(0, 1, 5), 1);
+  assert.equal(nextStep(4, 1, 5), 4);
+  assert.equal(nextStep(3, -1, 5), 2);
+});
+
+test("inlineSegments splits backticked code out of a value", () => {
+  assert.deepEqual(inlineSegments("plain"), [{ code: false, text: "plain" }]);
+  assert.deepEqual(inlineSegments("use `hi = mid` here"), [
+    { code: false, text: "use " }, { code: true, text: "hi = mid" }, { code: false, text: " here" },
+  ]);
+  assert.deepEqual(inlineSegments("`a` and `b`"), [
+    { code: true, text: "a" }, { code: false, text: " and " }, { code: true, text: "b" },
+  ]);
+  assert.deepEqual(inlineSegments("a lone ` tick"), [{ code: false, text: "a lone ` tick" }]);
+});

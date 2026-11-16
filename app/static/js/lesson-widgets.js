@@ -107,3 +107,154 @@ export function parseCompare(text) {
   if (empty) throw new BlockError(`option "${empty.name}" has no rows`);
   return { title, options };
 }
+
+// ---- view helpers (pure) -----------------------------------------------------------------
+
+export function stepView(data, k) {
+  const n = data.steps.length;
+  return {
+    counter: `Step ${k + 1} of ${n}`,
+    backDisabled: k <= 0,
+    nextDisabled: k >= n - 1,
+    narration: data.steps[k].text,
+    cells: stepCells(data, k),
+  };
+}
+
+export function nextStep(k, delta, n) {
+  return Math.min(n - 1, Math.max(0, k + delta));
+}
+
+/** Split `code` spans out of a value; an unpaired backtick stays plain text. */
+export function inlineSegments(text) {
+  const s = String(text);
+  const out = [];
+  const re = /`([^`]+)`/g;
+  let at = 0;
+  let m;
+  while ((m = re.exec(s))) {
+    if (m.index > at) out.push({ code: false, text: s.slice(at, m.index) });
+    out.push({ code: true, text: m[1] });
+    at = re.lastIndex;
+  }
+  if (at < s.length || !out.length) out.push({ code: false, text: s.slice(at) });
+  return out;
+}
+
+// ---- DOM builders ------------------------------------------------------------------------
+
+function el(doc, tag, cls, text) {
+  const e = doc.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+}
+
+function inline(doc, parent, text) {
+  for (const seg of inlineSegments(text)) {
+    parent.append(seg.code ? el(doc, "code", null, seg.text) : doc.createTextNode(seg.text));
+  }
+  return parent;
+}
+
+export function buildStepper(data, doc = globalThis.document) {
+  const box = el(doc, "div", "widget stepper");
+  box.setAttribute("tabindex", "0");
+  box.setAttribute("role", "group");
+  box.setAttribute("aria-label", data.title ? `Step-through: ${data.title}` : "Step-through");
+  if (data.title) box.append(inline(doc, el(doc, "div", "wtitle"), data.title));
+  const arr = el(doc, "div", "arr");
+  const narr = el(doc, "p", "narr");
+  narr.setAttribute("aria-live", "polite");
+  const bar = el(doc, "div", "wbar");
+  const back = el(doc, "button", "btn btn-sm", "← Back");
+  const next = el(doc, "button", "btn btn-primary btn-sm", "Next →");
+  back.type = next.type = "button";
+  const counter = el(doc, "span", "wcount");
+  bar.append(back, next, counter);
+  box.append(arr, narr, bar);
+
+  let k = 0;
+  const render = () => {
+    const v = stepView(data, k);
+    arr.replaceChildren(...v.cells.map((c) => {
+      const cell = el(doc, "div", `cell ${c.state}` + (c.ghost ? " ghost" : ""));
+      cell.append(el(doc, "div", "v", c.value), el(doc, "div", "i", c.ghost ? "" : String(c.index)),
+        el(doc, "div", "p", c.labels.join(" ")));
+      return cell;
+    }));
+    narr.replaceChildren();
+    inline(doc, narr, v.narration);
+    counter.textContent = v.counter;
+    back.disabled = v.backDisabled;
+    next.disabled = v.nextDisabled;
+  };
+  const go = (delta) => { k = nextStep(k, delta, data.steps.length); render(); };
+  back.addEventListener("click", () => go(-1));
+  next.addEventListener("click", () => go(1));
+  box.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowLeft") { e.preventDefault(); go(-1); }
+    else if (e.key === "ArrowRight") { e.preventDefault(); go(1); }
+  });
+  render();
+  return box;
+}
+
+export function buildCompare(data, doc = globalThis.document) {
+  const box = el(doc, "div", "widget compare");
+  if (data.title) box.append(inline(doc, el(doc, "div", "wtitle"), data.title));
+  const seg = el(doc, "div", "seg");
+  seg.setAttribute("role", "group");
+  const dl = el(doc, "dl");
+  box.append(seg, dl);
+  // Rows keep their place across options: the label order comes from the first option,
+  // and labels only another option has are appended in the order they first appear.
+  const labels = [];
+  for (const o of data.options) for (const r of o.rows) if (!labels.includes(r.label)) labels.push(r.label);
+  const dds = labels.map((lbl) => {
+    const dd = el(doc, "dd");
+    dl.append(el(doc, "dt", null, lbl), dd);
+    return dd;
+  });
+  const buttons = data.options.map((o, i) => {
+    const b = el(doc, "button", null, o.name);
+    b.type = "button";
+    b.addEventListener("click", () => show(i));
+    seg.append(b);
+    return b;
+  });
+  function show(i) {
+    buttons.forEach((b, j) => {
+      b.setAttribute("aria-pressed", String(i === j));
+      b.className = i === j ? "on" : "";
+    });
+    const rows = new Map(data.options[i].rows.map((r) => [r.label, r.value]));
+    dds.forEach((dd, j) => {
+      dd.replaceChildren();
+      inline(doc, dd, rows.has(labels[j]) ? rows.get(labels[j]) : "—");
+    });
+  }
+  show(0);
+  return box;
+}
+
+/** Replace a ```steps / ```compare block with its widget; on a bad block keep it and say so. */
+export function widgetFor(code) {
+  const pre = code.parentElement;
+  const doc = code.ownerDocument;
+  const kind = /\blanguage-(steps|compare)\b/.exec(code.className || "");
+  if (!pre || !kind) return null;
+  try {
+    const text = code.textContent;
+    const w = kind[1] === "steps" ? buildStepper(parseSteps(text), doc) : buildCompare(parseCompare(text), doc);
+    pre.replaceWith(w);
+    return w;
+  } catch (e) {
+    if (!(e instanceof BlockError)) throw e;
+    console.warn(`lesson: ${kind[1]} block: ${e.message}`);
+    const note = el(doc, "p", "widget-note", "demo could not be read");
+    note.title = e.message;
+    pre.after(note);
+    return null;
+  }
+}

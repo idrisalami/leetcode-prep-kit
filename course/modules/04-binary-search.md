@@ -310,6 +310,24 @@ Two conventions. Both are correct. **Mixing them is where most off-by-one and in
 
 **Read the "range is non-empty" row again: that's the whole derivation of the loop condition.** The loop runs exactly while there is still something left to check. Under `[lo, hi]` a range with `lo == hi` still holds one element, so the loop must run: `<=`. Under `[lo, hi)` a range with `lo == hi` holds nothing: `<`.
 
+```compare
+title: Two ways to write the range
+option: Closed [lo, hi]
+  Means: every index from lo to hi, both ends included
+  Start: lo, hi = 0, len(nums) - 1
+  Loop: while lo <= hi
+  Discard right: hi = mid - 1
+  Ends when: lo > hi, the range is empty
+  Use for: exact match
+option: Half-open [lo, hi)
+  Means: lo included, hi excluded
+  Start: lo, hi = 0, len(nums)
+  Loop: while lo < hi
+  Discard right: hi = mid
+  Ends when: lo == hi, lo is the answer
+  Use for: boundaries, lower_bound
+```
+
 > **You never guess `<` against `<=`. You state the convention and read the operator off it.** This is the concrete form of module 03's rule that *off-by-ones are invariant violations* ([03-two-pointers-sliding-window.md](03-two-pointers-sliding-window.md#the-invariant-is-the-correctness-tool); [bug-checklist.md](../reference/bug-checklist.md#off-by-ones-derive-never-freehand), §Off-by-ones: derive, never freehand).
 
 **The length of an inclusive range is `end - start + 1`**, and this is where it earns its keep. `[3, 3]` holds one element: `3 - 3 + 1 = 1`. `[3, 2]` holds `2 - 3 + 1 = 0`. Empty. That's why `lo > hi` is the exit test.
@@ -604,6 +622,17 @@ Thirty candidates, five probes. `log₂ 30 ≈ 4.9`. And at the exit, `lo = 6` i
 The generalisation. Instead of *"is it here?"* you ask *"where does the F→T boundary sit?"*, and that answers far more questions than equality does.
 
 **Both use the half-open range** `[lo, hi)` with `hi = len(nums)`, because **the answer may legitimately be `len(nums)`**: "everything is smaller than `target`, so it belongs off the end." A closed range whose `hi` starts at `n - 1` cannot express that.
+
+```steps
+title: lower_bound(nums, 7)
+array: 1 3 5 7 7 9 11
+range: half-open
+- lo=0 hi=7 | Start: the boundary is somewhere in [0, 7).
+- lo=0 hi=7 mid=3 | nums[3] = 7 >= 7, so mid is T. Keep it: hi = mid.
+- lo=0 hi=3 mid=1 | nums[1] = 3 < 7, so mid is F. lo = mid + 1.
+- lo=2 hi=3 mid=2 | nums[2] = 5 < 7. lo = mid + 1.
+- lo=3 hi=3 ans=3 | lo == hi: the boundary is index 3.
+```
 
 ```python
 def lower_bound(nums, target):
