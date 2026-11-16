@@ -344,6 +344,47 @@ function cloneKids(doc, from, into) {
   return into;
 }
 
+/**
+ * One self-check card, closed. Event wiring stays with the caller.
+ * The card is plain content, so a screen reader reads both the question and the answer; each face
+ * carries a real toggle button, which keeps "Got it" / "Missed it" out of any other button.
+ */
+export function buildFlipCard(doc, question, answer, n) {
+  const card = el(doc, "div", "flip");
+  const toggle = (text) => {
+    const b = el(doc, "button", "link flip-toggle", text);
+    b.type = "button";
+    b.setAttribute("aria-expanded", "false");
+    return b;
+  };
+  const show = toggle("Show answer");
+  const hide = toggle("Show question");
+  const inner = el(doc, "div", "flip-in");
+  const front = el(doc, "div", "flip-f");
+  const head = el(doc, "div", "flip-head");
+  const mark = el(doc, "span", "flip-mark");
+  head.append(el(doc, "span", "flip-num", `Q${n}`), mark);
+  front.append(head, cloneKids(doc, question, el(doc, "div", "flip-body")), show);
+  const back = el(doc, "div", "flip-b");
+  const acts = el(doc, "div", "flip-acts");
+  const got = el(doc, "button", "btn btn-sm flip-got", "Got it");
+  const missed = el(doc, "button", "btn btn-sm flip-missed", "Missed it");
+  got.type = missed.type = "button";
+  acts.append(got, missed, hide);
+  const answerBody = cloneKids(doc, answer, el(doc, "div", "flip-body"));
+  back.append(el(doc, "div", "flip-head", `Answer ${n}`), answerBody, acts);
+  back.setAttribute("aria-hidden", "true");
+  back.inert = true;
+  inner.append(front, back);
+  card.append(inner);
+  return { card, front, back, toggles: [show, hide], mark, got, missed, answerText: answerBody.textContent };
+}
+
+/** What the live region says when a card flips: the answer itself when it opens. */
+export function flipAnnouncement(open, n, answerText = "") {
+  return open ? `Answer ${n}: ${String(answerText).replace(/\s+/g, " ").trim()}` : `Question ${n}`;
+}
+
 function enrichSelfCheck(root, doc, path) {
   const q = sectionList(root, isSelfCheckHeading);
   const a = sectionList(root, (t) => ANSWERS_H2.test(String(t).trim()));
@@ -370,52 +411,30 @@ function enrichSelfCheck(root, doc, path) {
   grid.append(tally);
 
   const cards = pairs.map(([qi, ai], i) => {
-    const card = el(doc, "div", "flip");
-    card.setAttribute("role", "button");
-    card.setAttribute("tabindex", "0");
-    card.setAttribute("aria-label", `Question ${start + i}: show the answer`);
-    const inner = el(doc, "div", "flip-in");
-    const front = el(doc, "div", "flip-f");
-    const head = el(doc, "div", "flip-head");
-    const mark = el(doc, "span", "flip-mark");
-    head.append(el(doc, "span", "flip-num", `Q${start + i}`), mark);
-    front.append(head, cloneKids(doc, qi, el(doc, "div", "flip-body")));
-    const back = el(doc, "div", "flip-b");
-    const acts = el(doc, "div", "flip-acts");
-    const got = el(doc, "button", "btn btn-sm flip-got", "Got it");
-    const missed = el(doc, "button", "btn btn-sm flip-missed", "Missed it");
-    got.type = missed.type = "button";
-    acts.append(got, missed);
-    back.append(el(doc, "div", "flip-head", `Answer ${start + i}`), cloneKids(doc, ai, el(doc, "div", "flip-body")), acts);
-    inner.append(front, back);
-    card.append(inner);
+    const { card, front, back, toggles, mark, got, missed, answerText } = buildFlipCard(doc, qi, ai, start + i);
 
-    const setOpen = (open) => {
+    // `focus` moves focus to the toggle on the face now showing, so a keyboard user never sits on a hidden face.
+    const setOpen = (open, focus = false) => {
       card.classList.toggle("open", open);
       back.setAttribute("aria-hidden", String(!open));
       back.inert = !open;
       front.setAttribute("aria-hidden", String(open));
-      card.setAttribute("aria-label", `Question ${start + i}: ${open ? "show the question" : "show the answer"}`);
-      live.textContent = open ? "Answer shown" : "Question shown";
+      front.inert = open;
+      toggles.forEach((b) => b.setAttribute("aria-expanded", String(open)));
+      live.textContent = flipAnnouncement(open, start + i, answerText);
+      if (focus) toggles[open ? 1 : 0].focus();
     };
-    back.setAttribute("aria-hidden", "true");
-    back.inert = true;
     card.addEventListener("click", (e) => {
       if (e.target.closest("a, button")) return;
       setOpen(!card.classList.contains("open"));
     });
-    card.addEventListener("keydown", (e) => {
-      if (e.target !== card || (e.key !== "Enter" && e.key !== " ")) return;
-      e.preventDefault();
-      setOpen(!card.classList.contains("open"));
-    });
+    toggles.forEach((b) => b.addEventListener("click", () => setOpen(!card.classList.contains("open"), true)));
     const record = (value) => (e) => {
       e.stopPropagation();
       results = recordResult(results, i, value);
       store(key, results);
       draw();
-      setOpen(false);
-      card.focus();
+      setOpen(false, true);
     };
     got.addEventListener("click", record("got"));
     missed.addEventListener("click", record("missed"));

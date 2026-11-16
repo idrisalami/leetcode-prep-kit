@@ -34,6 +34,21 @@ class FakeNode {
     if (this.nodeType === 3) return this.data;
     return this.childNodes.map((c) => (c.nodeType === 8 ? "" : c.textContent)).join("");
   }
+  set textContent(v) {
+    if (this.nodeType === 3) { this.data = String(v); return; }
+    for (const c of [...this.childNodes]) this._drop(c);
+    if (v !== "" && v != null) this.appendChild(this.ownerDocument.createTextNode(v));
+  }
+  append(...nodes) {
+    for (const n of nodes) this.appendChild(typeof n === "string" ? this.ownerDocument.createTextNode(n) : n);
+  }
+  cloneNode(deep = false) {
+    const c = this.nodeType === 1 ? this.ownerDocument.createElement(this.localName) : new FakeNode(this.nodeType, this.ownerDocument);
+    if (this.nodeType !== 1) c.data = this.data;
+    else { c.attributes = this.attributes.map((a) => ({ ...a })); if (this.className) c.className = this.className; }
+    if (deep) for (const k of this.childNodes) c.appendChild(k.cloneNode(true));
+    return c;
+  }
 }
 
 class FakeElement extends FakeNode {

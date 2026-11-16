@@ -4,8 +4,9 @@ import assert from "node:assert/strict";
 import {
   classifyCallout, bigOClass, countWords, readingMinutes, pairSelfCheck, tallyText,
   progressLine, countsAsSection, newlyRead, parseStored, load, store,
-  splitTokenLines, lineMark, eyebrowText, splitH2Number, cellBadge,
+  splitTokenLines, lineMark, eyebrowText, splitH2Number, cellBadge, buildFlipCard, flipAnnouncement,
 } from "../lesson.js";
+import { installFakeDom, findAll } from "./fake-dom.mjs";
 
 test("classifyCallout follows the spec table", () => {
   const c = (o) => classifyCallout({ first: "text", text: "", bold: "", h2: "", ...o });
@@ -218,4 +219,29 @@ test("newlySeen: a scroll past counts, a jump past does not", () => {
   assert.deepEqual(newlySeen([{ id: "a", top: 200 }], { a: -1600 }, vh, new Set()), ["a"]);
   // Already read, or still below the fold: nothing.
   assert.deepEqual(newlySeen([{ id: "a", top: 100 }, { id: "c", top: 900 }], {}, vh, new Set(["a"])), []);
+});
+
+test("flip card exposes question and answer as content, with a real toggle button on each face", () => {
+  const doc = installFakeDom();
+  const li = (text) => { const e = doc.createElement("li"); e.append(text); return e; };
+  const { card, front, back, toggles, got, missed } = buildFlipCard(doc, li("Why a min-heap?"), li("It keeps the k largest."), 3);
+  for (const a of ["role", "tabindex", "aria-label"]) assert.equal(card.getAttribute(a), null, `card has no ${a}`);
+  assert.ok(front.textContent.includes("Why a min-heap?"));
+  assert.ok(back.textContent.includes("It keeps the k largest."));
+  const [show, hide] = toggles;
+  assert.equal(show.localName, "button");
+  assert.equal(show.type, "button");
+  assert.equal(show.textContent, "Show answer");
+  assert.equal(show.getAttribute("aria-expanded"), "false");
+  assert.ok(findAll(front, "button").includes(show));
+  assert.equal(hide.textContent, "Show question");
+  assert.ok(findAll(back, "button").includes(hide));
+  assert.equal(back.getAttribute("aria-hidden"), "true");
+  assert.equal(back.inert, true);
+  assert.deepEqual([got.textContent, missed.textContent], ["Got it", "Missed it"]);
+});
+
+test("flipAnnouncement reads the answer out on flip, not just that it flipped", () => {
+  assert.equal(flipAnnouncement(true, 3, "  It keeps\n the k largest. "), "Answer 3: It keeps the k largest.");
+  assert.equal(flipAnnouncement(false, 3, "ignored"), "Question 3");
 });
